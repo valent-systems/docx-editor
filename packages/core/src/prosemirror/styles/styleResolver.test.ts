@@ -231,6 +231,94 @@ describe('StyleResolver', () => {
       expect(result?.fontSize).toBe(22); // From docDefaults
       expect(result?.bold).toBe(true); // From Strong style
     });
+
+    // ECMA-376 §17.7.4.18: runs without explicit <w:rStyle> still inherit from
+    // the default character style (the one marked w:default="1"). Pre-PR,
+    // resolveRunStyle skipped this tier — only docDefaults reached such runs.
+    test('applies default character style when no styleId given', () => {
+      const styleDefinitions: StyleDefinitions = {
+        docDefaults: {
+          rPr: { fontSize: 22 },
+        },
+        styles: [
+          {
+            styleId: 'FontePadrao',
+            type: 'character',
+            default: true,
+            rPr: { fontFamily: { ascii: 'Cambria', hAnsi: 'Cambria' } },
+          },
+        ],
+      };
+
+      const resolver = createStyleResolver(styleDefinitions);
+      const result = resolver.resolveRunStyle(null);
+
+      expect(result?.fontSize).toBe(22); // docDefaults
+      expect(result?.fontFamily?.ascii).toBe('Cambria'); // default char style
+    });
+
+    test('explicit rStyle overrides default character style', () => {
+      const styleDefinitions: StyleDefinitions = {
+        docDefaults: { rPr: { fontSize: 22 } },
+        styles: [
+          {
+            styleId: 'FontePadrao',
+            type: 'character',
+            default: true,
+            rPr: { fontFamily: { ascii: 'Cambria', hAnsi: 'Cambria' } },
+          },
+          {
+            styleId: 'Code',
+            type: 'character',
+            rPr: { fontFamily: { ascii: 'Consolas', hAnsi: 'Consolas' } },
+          },
+        ],
+      };
+
+      const resolver = createStyleResolver(styleDefinitions);
+      const result = resolver.resolveRunStyle('Code');
+
+      // Cascade: docDefaults (fontSize 22) → default char style (Cambria) →
+      // explicit Code style (Consolas overrides Cambria, fontSize stays 22).
+      expect(result?.fontSize).toBe(22);
+      expect(result?.fontFamily?.ascii).toBe('Consolas');
+    });
+
+    test('getDefaultCharacterStyle returns the style flagged default', () => {
+      const styleDefinitions: StyleDefinitions = {
+        styles: [
+          {
+            styleId: 'FontePadrao',
+            type: 'character',
+            default: true,
+            rPr: {},
+          },
+          {
+            styleId: 'Code',
+            type: 'character',
+            rPr: {},
+          },
+        ],
+      };
+
+      const resolver = createStyleResolver(styleDefinitions);
+      expect(resolver.getDefaultCharacterStyle()?.styleId).toBe('FontePadrao');
+    });
+
+    test('getDefaultCharacterStyle returns undefined when no default flagged', () => {
+      const styleDefinitions: StyleDefinitions = {
+        styles: [
+          {
+            styleId: 'Code',
+            type: 'character',
+            rPr: {},
+          },
+        ],
+      };
+
+      const resolver = createStyleResolver(styleDefinitions);
+      expect(resolver.getDefaultCharacterStyle()).toBeUndefined();
+    });
   });
 
   describe('getParagraphStyles', () => {

@@ -55,6 +55,7 @@ export class StyleResolver {
   private readonly docDefaults: DocDefaults | undefined;
   private readonly defaultParagraphStyle: Style | undefined;
   private readonly defaultTableStyle: Style | undefined;
+  private readonly defaultCharacterStyle: Style | undefined;
 
   constructor(styleDefinitions: StyleDefinitions | undefined) {
     this.stylesById = new Map();
@@ -69,9 +70,10 @@ export class StyleResolver {
       }
     }
 
-    // Find defaults — paragraph and table
+    // Find defaults — one per type per ECMA-376 §17.7.4.18.
     this.defaultParagraphStyle = this.findDefaultStyle('paragraph');
     this.defaultTableStyle = this.findDefaultStyle('table');
+    this.defaultCharacterStyle = this.findDefaultStyle('character');
   }
 
   /**
@@ -177,26 +179,32 @@ export class StyleResolver {
    * @returns Resolved text formatting
    */
   resolveRunStyle(styleId: string | undefined | null): TextFormatting | undefined {
-    // Start with document defaults
+    // OOXML §17.7.4.18 + §17.3.2 cascade for run formatting:
+    //   1. docDefaults.rPr            (rPrDefault)
+    //   2. default character style    (the style marked w:default="1")
+    //   3. explicit character style   (from <w:rStyle> on the run)
+    // Pre-PR this method skipped step 2, so any property set on the default
+    // character style (typically "Default Paragraph Font" / "FontePadrao")
+    // never reached runs without an explicit <w:rStyle>.
     let result: TextFormatting = {};
     if (this.docDefaults?.rPr) {
       result = { ...this.docDefaults.rPr };
     }
 
-    // If no styleId, return defaults
+    if (this.defaultCharacterStyle?.rPr) {
+      result = this.mergeTextFormatting(result, this.defaultCharacterStyle.rPr) ?? result;
+    }
+
     if (!styleId) {
       return Object.keys(result).length > 0 ? result : undefined;
     }
 
-    // Get the requested style
     const style = this.stylesById.get(styleId);
     if (!style?.rPr) {
       return Object.keys(result).length > 0 ? result : undefined;
     }
 
-    // Merge style's run properties
     const merged = this.mergeTextFormatting(result, style.rPr);
-
     return merged && Object.keys(merged).length > 0 ? merged : undefined;
   }
 
@@ -238,6 +246,18 @@ export class StyleResolver {
    */
   getDefaultTableStyle(): Style | undefined {
     return this.defaultTableStyle;
+  }
+
+  /**
+   * Get the default character style (the one marked `w:default="1"`).
+   *
+   * Per ECMA-376 §17.7.4.18, runs without an explicit `w:rStyle` reference
+   * inherit from this style. The styleId varies by document language
+   * ("Default Paragraph Font", "FontePadrao", "Fontepargpadro" in
+   * Portuguese fixtures, etc.) — find it by the parsed `default` flag.
+   */
+  getDefaultCharacterStyle(): Style | undefined {
+    return this.defaultCharacterStyle;
   }
 
   /**

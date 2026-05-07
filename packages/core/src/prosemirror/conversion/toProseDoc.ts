@@ -324,9 +324,23 @@ function paragraphFormattingToAttrs(
     // Text direction
     attrs.bidi = formatting?.bidi ?? stylePpr?.bidi;
 
-    // Default run properties (pPr/rPr)
+    // Default run properties for runs in this paragraph that don't carry
+    // explicit marks. ECMA-376 §17.7.4.18 + §17.3.2 cascade for run
+    // formatting:
+    //   1. docDefaults.rPr            (already in styleRpr)
+    //   2. paragraph style's rPr      (already in styleRpr — basedOn flattened)
+    //   3. default character style    (the style marked w:default="1")
+    //   4. paragraph-level rPr        (from <w:pPr><w:rPr>)
+    // The character-style step on the run itself (w:rStyle) applies later in
+    // the per-run conversion. Without merging the default character style
+    // here, runs without an explicit <w:rStyle> never see properties set on
+    // it (e.g. "Default Paragraph Font" / "FontePadrao" font overrides).
+    const defaultCharStyleRpr = styleResolver.getDefaultCharacterStyle()?.rPr;
+    const styleRprWithDefaultChar = defaultCharStyleRpr
+      ? mergeTextFormatting(styleRpr, defaultCharStyleRpr)
+      : styleRpr;
     const resolvedRunProps = resolveTextFormatting(formatting?.runProperties, styleResolver);
-    attrs.defaultTextFormatting = mergeTextFormatting(styleRpr, resolvedRunProps);
+    attrs.defaultTextFormatting = mergeTextFormatting(styleRprWithDefaultChar, resolvedRunProps);
 
     // If style defines numPr but inline doesn't, use style's numPr
     // numId === 0 means "no numbering" per OOXML spec — skip it
@@ -461,9 +475,15 @@ function resolveTextFormatting(
   styleResolver: StyleResolver | null
 ): TextFormatting | undefined {
   if (!formatting) return undefined;
-  if (!formatting.styleId || !styleResolver) return formatting;
+  if (!styleResolver) return formatting;
 
+  // Even when the run has no explicit <w:rStyle>, OOXML §17.7.4.18 says it
+  // still inherits from the default character style. resolveRunStyle(undef)
+  // returns docDefaults.rPr merged with the default character style's rPr —
+  // pre-PR we skipped this path entirely for runs without a styleId, losing
+  // any property the default character style sets.
   const styleFormatting = styleResolver.resolveRunStyle(formatting.styleId);
+  if (!styleFormatting) return formatting;
   return mergeTextFormatting(styleFormatting, formatting);
 }
 
@@ -544,28 +564,25 @@ function convertTable(
   const tableStyleId = table.formatting?.styleId;
   const look = table.formatting?.look;
 
-  // Resolve table borders: prefer table's own borders, fall back to table style's borders
+  // Resolve table borders via the OOXML cascade (§17.4.41 + §17.7.4.18):
+  //   1. inline w:tblBorders on the table
+  //   2. table style's tblPr.borders (basedOn chain already flattened)
+  //   3. default table style's tblPr.borders (the style marked w:default="1")
+  // Pre-PR, when no tblStyle was set we hardcoded a lookup of styleId
+  // "TableGrid" — fragile for non-Word generators (which may not ship that
+  // style) and incorrect for docs whose default table style differs from
+  // TableGrid. Walking through the parsed default flag matches spec and
+  // works for any document language ("Normal Table", "TableNormal", etc.).
   const tableStyle = tableStyleId ? styleResolver?.getStyle(tableStyleId) : undefined;
-  const implicitTableGridStyle = !tableStyleId ? styleResolver?.getStyle('TableGrid') : undefined;
-  const resolvedTableBorders =
-    table.formatting?.borders ??
-    tableStyle?.tblPr?.borders ??
-    implicitTableGridStyle?.tblPr?.borders;
-
-  // Resolve default cell margins via the OOXML cascade (§17.4.41 + §17.7.4.18):
-  //   1. inline w:tblCellMar on the table
-  //   2. resolved table style's tblPr.cellMargins (the basedOn chain is already
-  //      flattened during parse via resolveStyleInheritance, so this includes
-  //      values inherited from any ancestor style)
-  //   3. the document's default table style (the one marked w:default="1").
-  //      Tables that don't carry a tblStyle reference still inherit from this
-  //      per the spec; without this tier, such tables had no cellMargins at
-  //      all and the layout-bridge fell back to a hardcoded 7 px.
-  //
-  // The default-table-style ID varies by document language ("Normal Table",
-  // "TableNormal", "Tabelanormal", etc.), so we look it up by the parsed
-  // `w:default` flag rather than by name.
   const defaultTableStyle = styleResolver?.getDefaultTableStyle();
+  const resolvedTableBorders =
+    table.formatting?.borders ?? tableStyle?.tblPr?.borders ?? defaultTableStyle?.tblPr?.borders;
+
+  // Resolve default cell margins via the same cascade as borders. Tables
+  // that don't carry a tblStyle reference still inherit cellMargins from the
+  // default table style per §17.4.41 + §17.7.4.18; pre-PR such tables had
+  // no cellMargins at all and the layout-bridge fell back to a hardcoded
+  // 7 px. `defaultTableStyle` is shared with the borders cascade above.
   const tableCellMargins =
     table.formatting?.cellMargins ??
     tableStyle?.tblPr?.cellMargins ??
