@@ -6,6 +6,7 @@ import { createMarkExtension } from '../create';
 import { isMarkActive } from './markUtils';
 import type { HyperlinkAttrs } from '../../schema/marks';
 import type { Command, EditorState } from 'prosemirror-state';
+import type { Mark } from 'prosemirror-model';
 import type { ExtensionContext, ExtensionRuntime } from '../types';
 
 // ============================================================================
@@ -53,6 +54,70 @@ export function getSelectedText(state: EditorState): string {
   const { from, to, empty } = state.selection;
   if (empty) return '';
   return state.doc.textBetween(from, to, '');
+}
+
+/**
+ * Resolve the hyperlink mark + contiguous range that surrounds the
+ * current cursor. Used by edit/remove popup actions in both adapters.
+ *
+ * Resolution order for the mark itself:
+ *   1. `$from.marks()` — the normal active-marks lookup
+ *   2. `$from.nodeAfter`/`nodeBefore` marks — boundary positions don't
+ *      report active marks via `marks()`
+ *   3. (optional) text-node search by `fallbackHref` — last resort when
+ *      the popup knows the href but the cursor sits at a gap
+ *
+ * The returned range walks the parent block grouping consecutive text
+ * nodes that share the same href, and returns whichever range contains
+ * the cursor.
+ */
+export function findHyperlinkRangeAt(
+  state: EditorState,
+  fallbackHref?: string
+): { mark: Mark; start: number; end: number } | null {
+  const hlType = state.schema.marks.hyperlink;
+  if (!hlType) return null;
+
+  const { $from } = state.selection;
+
+  let linkMark: Mark | undefined = $from.marks().find((m) => m.type === hlType);
+  if (!linkMark && $from.nodeAfter) {
+    linkMark = $from.nodeAfter.marks.find((m) => m.type === hlType);
+  }
+  if (!linkMark && $from.nodeBefore) {
+    linkMark = $from.nodeBefore.marks.find((m) => m.type === hlType);
+  }
+  if (!linkMark && fallbackHref) {
+    $from.parent.forEach((node) => {
+      if (linkMark || !node.isText) return;
+      const m = node.marks.find((mk) => mk.type === hlType && mk.attrs.href === fallbackHref);
+      if (m) linkMark = m;
+    });
+  }
+  if (!linkMark) return null;
+
+  type Range = { start: number; end: number };
+  const parentStart = $from.start();
+  const ranges: Range[] = [];
+  let current: Range | null = null;
+  $from.parent.forEach((node, offset) => {
+    const nodeStart = parentStart + offset;
+    const nodeEnd = nodeStart + node.nodeSize;
+    const matches =
+      node.isText &&
+      node.marks.some((m) => m.type === hlType && m.attrs.href === linkMark!.attrs.href);
+    if (matches) {
+      if (current) current.end = nodeEnd;
+      else current = { start: nodeStart, end: nodeEnd };
+    } else if (current) {
+      ranges.push(current);
+      current = null;
+    }
+  });
+  if (current) ranges.push(current);
+  const found = ranges.find((r) => r.start <= $from.pos && $from.pos <= r.end);
+  if (!found) return null;
+  return { mark: linkMark, start: found.start, end: found.end };
 }
 
 // ============================================================================

@@ -42,15 +42,13 @@ import {
   layoutDocument,
   findPageIndexContainingPmPos,
   collectSectionConfigs,
-} from '@eigenpal/docx-core/layout-engine';
-import type { ColumnLayout, SectionLayoutConfig } from '@eigenpal/docx-core/layout-engine';
+} from '@eigenpal/docx-editor-core/layout-engine';
+import type { ColumnLayout, SectionLayoutConfig } from '@eigenpal/docx-editor-core/layout-engine';
 import type {
   Layout,
   FlowBlock,
   Measure,
   ParagraphBlock,
-  ParagraphMeasure,
-  TableCell,
   TableBlock,
   TableMeasure,
   ImageBlock,
@@ -59,20 +57,24 @@ import type {
   PageMargins,
   SectionBreakBlock,
   TextBoxBlock,
-} from '@eigenpal/docx-core/layout-engine';
-import { DEFAULT_TEXTBOX_MARGINS, DEFAULT_TEXTBOX_WIDTH } from '@eigenpal/docx-core/layout-engine';
+} from '@eigenpal/docx-editor-core/layout-engine';
+import {
+  DEFAULT_TEXTBOX_MARGINS,
+  DEFAULT_TEXTBOX_WIDTH,
+  assertExhaustiveFlowBlock,
+} from '@eigenpal/docx-editor-core/layout-engine';
 
 // Table commands (for quick-action insert buttons)
 import {
   addRowBelow,
   addColumnRight,
   findStartPosForParaId,
-} from '@eigenpal/docx-core/prosemirror';
+} from '@eigenpal/docx-editor-core/prosemirror';
 
 // Layout bridge
-import { toFlowBlocks } from '@eigenpal/docx-core/layout-bridge';
-import type { WrapType } from '@eigenpal/docx-core/docx/wrapTypes';
-import { hitTestImage, captureInlinePositionEmu } from '@eigenpal/docx-core/layout-painter';
+import { toFlowBlocks } from '@eigenpal/docx-editor-core/layout-bridge';
+import type { WrapType } from '@eigenpal/docx-editor-core/docx/wrapTypes';
+import { hitTestImage, captureInlinePositionEmu } from '@eigenpal/docx-editor-core/layout-painter';
 import {
   measureParagraph,
   resetCanvasContext,
@@ -80,30 +82,34 @@ import {
   getCachedParagraphMeasure,
   setCachedParagraphMeasure,
   type FloatingImageZone,
-  resolveTableWidthPx,
-  countTableColumns,
-  normalizeTableColumnWidths,
-} from '@eigenpal/docx-core/layout-bridge';
-import { hitTestFragment, hitTestTableCell, getPageTop } from '@eigenpal/docx-core/layout-bridge';
-import { clickToPosition } from '@eigenpal/docx-core/layout-bridge';
-import { clickToPositionDom } from '@eigenpal/docx-core/layout-bridge';
+  measureTableBlock,
+  getPageSize,
+  getMargins,
+  DEFAULT_PAGE_HEIGHT_PX,
+} from '@eigenpal/docx-editor-core/layout-bridge';
+import {
+  hitTestFragment,
+  hitTestTableCell,
+  getPageTop,
+} from '@eigenpal/docx-editor-core/layout-bridge';
+import { clickToPosition } from '@eigenpal/docx-editor-core/layout-bridge';
+import { clickToPositionDom } from '@eigenpal/docx-editor-core/layout-bridge';
 import {
   findBodyEmptyRuns,
   findBodyPmAnchor,
   findBodyPmAnchors,
   findBodyPmSpans,
-} from '@eigenpal/docx-core/layout-bridge';
+} from '@eigenpal/docx-editor-core/layout-bridge';
 import {
   selectionToRects,
   getCaretPosition,
   type SelectionRect,
   type CaretPosition,
-} from '@eigenpal/docx-core/layout-bridge';
-import { findWordBoundaries } from '@eigenpal/docx-core/utils';
-import { emuToPixels, pixelsToEmu } from '@eigenpal/docx-core/utils';
+} from '@eigenpal/docx-editor-core/layout-bridge';
+import { findWordBoundaries, emuToPixels, pixelsToEmu } from '@eigenpal/docx-editor-core/utils';
 
 // Layout painter
-import { LayoutPainter, type BlockLookup } from '@eigenpal/docx-core/layout-painter';
+import { LayoutPainter, type BlockLookup } from '@eigenpal/docx-editor-core/layout-painter';
 import {
   renderPages,
   type RenderPageOptions,
@@ -111,14 +117,15 @@ import {
   type HeaderFooterContent,
   type FootnoteRenderItem,
   isTextWrappingFloatingImageRun,
-} from '@eigenpal/docx-core/layout-painter';
+  findImageElement as coreFindImageElement,
+} from '@eigenpal/docx-editor-core/layout-painter';
 
 // Selection sync
 import { LayoutSelectionGate } from './LayoutSelectionGate';
 
 // Visual line navigation hook
-import { useVisualLineNavigation } from './useVisualLineNavigation';
-import { useDragAutoScroll } from './useDragAutoScroll';
+import { useVisualLineNavigation } from '../hooks/useVisualLineNavigation';
+import { useDragAutoScroll } from '../hooks/useDragAutoScroll';
 
 // Sidebar constants
 import { SIDEBAR_DOCUMENT_SHIFT } from '../components/sidebar/constants';
@@ -130,21 +137,19 @@ import type {
   StyleDefinitions,
   SectionProperties,
   HeaderFooter,
-} from '@eigenpal/docx-core/types/document';
-import type { Footnote } from '@eigenpal/docx-core/types/content';
-import { getFootnoteText } from '@eigenpal/docx-core/docx';
+} from '@eigenpal/docx-editor-core/types/document';
 import {
   collectFootnoteRefs,
-  mapFootnotesToPages,
-  calculateFootnoteReservedHeights,
   buildFootnoteContentMap,
+  buildFootnoteRenderItems,
+  stabilizeFootnoteLayout,
   convertHeaderFooterToContent,
   detectTableInsertHover,
   TABLE_INSERT_HIDE_DELAY_MS as TABLE_INSERT_HIDE_DELAY,
-} from '@eigenpal/docx-core/layout-bridge';
+} from '@eigenpal/docx-editor-core/layout-bridge';
 import type { RenderedDomContext } from '../plugin-api/types';
 import { createRenderedDomContext } from '../plugin-api/RenderedDomContext';
-import { findVerticalScrollParentOrRoot } from './findVerticalScrollParent';
+import { findVerticalScrollParentOrRoot } from '@eigenpal/docx-editor-core/utils/findVerticalScrollParent';
 
 /**
  * Vertically scroll `container` so `el`'s center aligns with the container's visible center.
@@ -254,7 +259,7 @@ export interface PagedEditorProps {
   /** External ProseMirror plugins. */
   externalPlugins?: Plugin[];
   /** Extension manager for plugins/schema/commands (optional — falls back to default) */
-  extensionManager?: import('@eigenpal/docx-core/prosemirror/extensions').ExtensionManager;
+  extensionManager?: import('@eigenpal/docx-editor-core/prosemirror/extensions').ExtensionManager;
   /** Callback when editor is ready. */
   onReady?: (ref: PagedEditorRef) => void;
   /** Callback when rendered DOM context is ready. */
@@ -359,20 +364,12 @@ export interface PagedEditorRef {
 
 // Default page size (US Letter at 96 DPI)
 export const DEFAULT_PAGE_WIDTH = 816;
-const DEFAULT_PAGE_HEIGHT = 1056;
-
-// Default margins (1 inch at 96 DPI)
-const DEFAULT_MARGINS: PageMargins = {
-  top: 96,
-  right: 96,
-  bottom: 96,
-  left: 96,
-};
 
 const DEFAULT_PAGE_GAP = 24;
 
-// Table-insert hover constants live in core (`@eigenpal/docx-core/layout-
-// bridge`) so React + Vue share the same hit-test parameters.
+// Table-insert hover constants live in core
+// (`@eigenpal/docx-editor-core/layout-bridge`) so React + Vue share the
+// same hit-test parameters.
 
 // Stable empty array to avoid re-creating on each render
 const EMPTY_PLUGINS: Plugin[] = [];
@@ -537,41 +534,9 @@ function twipsToPixels(twips: number): number {
   return Math.round((twips / 1440) * 96);
 }
 
-/**
- * Extract page size from section properties or use defaults.
- */
-function getPageSize(sectionProps: SectionProperties | null | undefined): {
-  w: number;
-  h: number;
-} {
-  return {
-    w: sectionProps?.pageWidth ? twipsToPixels(sectionProps.pageWidth) : DEFAULT_PAGE_WIDTH,
-    h: sectionProps?.pageHeight ? twipsToPixels(sectionProps.pageHeight) : DEFAULT_PAGE_HEIGHT,
-  };
-}
-
-/**
- * Extract margins from section properties or use defaults.
- */
-function getMargins(sectionProps: SectionProperties | null | undefined): PageMargins {
-  const top = sectionProps?.marginTop ? twipsToPixels(sectionProps.marginTop) : DEFAULT_MARGINS.top;
-  const bottom = sectionProps?.marginBottom
-    ? twipsToPixels(sectionProps.marginBottom)
-    : DEFAULT_MARGINS.bottom;
-
-  return {
-    top,
-    right: sectionProps?.marginRight
-      ? twipsToPixels(sectionProps.marginRight)
-      : DEFAULT_MARGINS.right,
-    bottom,
-    left: sectionProps?.marginLeft ? twipsToPixels(sectionProps.marginLeft) : DEFAULT_MARGINS.left,
-    // Header/footer distances - where the header/footer content starts
-    // Default to 0.5 inch (48px at 96 DPI) if not specified
-    header: sectionProps?.headerDistance ? twipsToPixels(sectionProps.headerDistance) : 48,
-    footer: sectionProps?.footerDistance ? twipsToPixels(sectionProps.footerDistance) : 48,
-  };
-}
+// `getPageSize` and `getMargins` live in
+// `@eigenpal/docx-editor-core/layout-bridge` (sectionGeometry) so React
+// and Vue agree on the SectionProperties → pixel translation.
 
 /**
  * Extract column layout from section properties.
@@ -632,193 +597,9 @@ function computePerBlockWidths(
 // duplicates were drifting from the canonical implementations; sharing
 // keeps them in lockstep across React + Vue adapters.
 
-export function measureTableCellBlockVisualHeight(block: FlowBlock, blockMeasure: Measure): number {
-  if (block.kind !== 'paragraph' || blockMeasure.kind !== 'paragraph') {
-    if ('totalHeight' in blockMeasure) return blockMeasure.totalHeight;
-    if ('height' in blockMeasure) return blockMeasure.height;
-    return 0;
-  }
-
-  const paragraphBlock = block as ParagraphBlock;
-  const paragraphMeasure = blockMeasure as ParagraphMeasure;
-  const nonEmptyRuns = paragraphBlock.runs.filter(
-    (run) => run.kind !== 'text' || run.text.length > 0
-  );
-  const imageOnlySingleLine =
-    paragraphMeasure.lines.length === 1 &&
-    nonEmptyRuns.length > 0 &&
-    nonEmptyRuns.every((run) => run.kind === 'image');
-
-  if (!imageOnlySingleLine) {
-    return paragraphMeasure.totalHeight;
-  }
-
-  const maxImageHeight = nonEmptyRuns.reduce((maxHeight, run) => {
-    return run.kind === 'image' ? Math.max(maxHeight, run.height) : maxHeight;
-  }, 0);
-  const spacingBefore = paragraphBlock.attrs?.spacing?.before ?? 0;
-  const spacingAfter = paragraphBlock.attrs?.spacing?.after ?? 0;
-
-  return spacingBefore + maxImageHeight + spacingAfter;
-}
-
-function getTableCellVerticalBorderHeight(cell: TableCell | undefined): number {
-  const top = cell?.borders?.top?.width ?? 0;
-  const bottom = cell?.borders?.bottom?.width ?? 0;
-  return top + bottom;
-}
-
-export function measureTableBlock(tableBlock: TableBlock, contentWidth: number): TableMeasure {
-  const DEFAULT_CELL_PADDING_X = 7; // Word default: 108 twips ≈ 7px
-  const DEFAULT_CELL_PADDING_Y = 0; // OOXML/TableNormal default: top=0, bottom=0
-
-  // columnWidths are already in pixels (converted in toFlowBlocks)
-  let columnWidths = tableBlock.columnWidths ?? [];
-  const explicitWidthPx = resolveTableWidthPx(tableBlock.width, tableBlock.widthType, contentWidth);
-  const colCount = countTableColumns(tableBlock);
-  const targetWidth = explicitWidthPx ?? contentWidth;
-
-  if (tableBlock.rows.length > 0) {
-    columnWidths = normalizeTableColumnWidths(columnWidths, colCount, targetWidth);
-  }
-
-  if (columnWidths.length > 0 && explicitWidthPx) {
-    const totalWidth = columnWidths.reduce((sum, w) => sum + w, 0);
-    if (totalWidth > 0 && Math.abs(totalWidth - explicitWidthPx) > 1) {
-      const scale = explicitWidthPx / totalWidth;
-      columnWidths = columnWidths.map((w) => w * scale);
-    }
-  }
-
-  // Build a map of columns occupied by spanning cells from previous rows.
-  // Without this, cells in rows with vertical merges get the wrong column width.
-  const occupiedColumnsPerRow = new Map<number, Set<number>>();
-  for (let rowIdx = 0; rowIdx < tableBlock.rows.length; rowIdx++) {
-    const row = tableBlock.rows[rowIdx];
-    if (!row) continue;
-    let colIdx = 0;
-    const occupied = occupiedColumnsPerRow.get(rowIdx) ?? new Set<number>();
-    while (occupied.has(colIdx)) colIdx++;
-
-    for (const cell of row.cells) {
-      const colSpan = cell.colSpan ?? 1;
-      const rowSpan = cell.rowSpan ?? 1;
-
-      if (rowSpan > 1) {
-        for (let r = rowIdx + 1; r < rowIdx + rowSpan; r++) {
-          if (!occupiedColumnsPerRow.has(r)) occupiedColumnsPerRow.set(r, new Set());
-          const occSet = occupiedColumnsPerRow.get(r)!;
-          for (let c = 0; c < colSpan; c++) {
-            occSet.add(colIdx + c);
-          }
-        }
-      }
-
-      colIdx += colSpan;
-      while (occupied.has(colIdx)) colIdx++;
-    }
-  }
-
-  // Calculate cell widths based on colSpan and columnWidths,
-  // skipping columns occupied by spanning cells from previous rows.
-  const rows = tableBlock.rows.map((row, rowIdx) => {
-    let columnIndex = 0;
-    const occupied = occupiedColumnsPerRow.get(rowIdx) ?? new Set<number>();
-    while (occupied.has(columnIndex)) columnIndex++;
-
-    return {
-      cells: row.cells.map((cell) => {
-        const colSpan = cell.colSpan ?? 1;
-        // Calculate cell width as sum of spanned columns
-        let cellWidth = 0;
-        for (let c = 0; c < colSpan && columnIndex + c < columnWidths.length; c++) {
-          cellWidth += columnWidths[columnIndex + c] ?? 0;
-        }
-        // Fallback to cell.width or default if columnWidths not available
-        if (cellWidth === 0) {
-          cellWidth =
-            (cell.width && cell.width > 0
-              ? cell.width
-              : resolveTableWidthPx(cell.widthValue, cell.widthType, targetWidth)) ?? 100;
-        }
-        columnIndex += colSpan;
-        while (occupied.has(columnIndex)) columnIndex++;
-
-        const padLeft = cell.padding?.left ?? DEFAULT_CELL_PADDING_X;
-        const padRight = cell.padding?.right ?? DEFAULT_CELL_PADDING_X;
-        const cellContentWidth = Math.max(1, cellWidth - padLeft - padRight);
-        return {
-          blocks: cell.blocks.map((b) => measureBlock(b, cellContentWidth)),
-          width: cellWidth,
-          height: 0, // Calculated below
-          colSpan: cell.colSpan,
-          rowSpan: cell.rowSpan,
-        };
-      }),
-      height: 0,
-    };
-  });
-
-  // Calculate cell heights, respecting explicit row height rules
-  for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
-    const row = rows[rowIdx];
-    const sourceRowCells = tableBlock.rows[rowIdx]?.cells;
-    let maxHeight = 0;
-    let maxVerticalBorderHeight = 0;
-    for (let cellIdx = 0; cellIdx < row.cells.length; cellIdx++) {
-      const cell = row.cells[cellIdx];
-      const sourceCell = sourceRowCells?.[cellIdx];
-      // `paragraphMeasure.totalHeight` already includes spacing.before /
-      // spacing.after; just sum the block heights. Adjacent-paragraph
-      // collapse rules don't apply across the cell-content boundary, so this
-      // matches Word's per-cell layout.
-      let contentHeight = 0;
-      for (let blockIdx = 0; blockIdx < cell.blocks.length; blockIdx++) {
-        const sourceBlock = sourceCell?.blocks[blockIdx];
-        const blockMeasure = cell.blocks[blockIdx];
-        if (!sourceBlock || !blockMeasure) continue;
-        contentHeight += measureTableCellBlockVisualHeight(sourceBlock, blockMeasure);
-      }
-
-      cell.height = contentHeight;
-      const padTop = sourceCell?.padding?.top ?? DEFAULT_CELL_PADDING_Y;
-      const padBottom = sourceCell?.padding?.bottom ?? DEFAULT_CELL_PADDING_Y;
-      cell.height += padTop + padBottom;
-      maxHeight = Math.max(maxHeight, cell.height);
-      maxVerticalBorderHeight = Math.max(
-        maxVerticalBorderHeight,
-        getTableCellVerticalBorderHeight(sourceCell)
-      );
-    }
-
-    // Apply heightRule from the source row
-    const sourceRow = tableBlock.rows[rowIdx];
-    const explicitHeight = sourceRow?.height;
-    const heightRule = sourceRow?.heightRule;
-
-    if (explicitHeight && heightRule === 'exact') {
-      row.height = explicitHeight;
-    } else if (explicitHeight) {
-      // Both 'atLeast' and 'auto' (OOXML default) treat the value as minimum height.
-      // ECMA-376 §17.4.81: when hRule is absent or "auto", val is the minimum row height.
-      row.height = Math.max(maxHeight + maxVerticalBorderHeight, explicitHeight);
-    } else {
-      // No explicit height — use content height directly.
-      row.height = maxHeight + maxVerticalBorderHeight;
-    }
-  }
-
-  const totalHeight = rows.reduce((h, r) => h + r.height, 0);
-  const totalWidth = columnWidths.reduce((w, cw) => w + cw, 0) || explicitWidthPx || contentWidth;
-
-  return {
-    kind: 'table',
-    rows,
-    columnWidths,
-    totalWidth,
-    totalHeight,
-  };
-}
+// `measureTableBlock` lives in `@eigenpal/docx-editor-core/layout-bridge`
+// so the Vue adapter shares it. Imported via the layout-bridge barrel
+// alongside the other table-width utilities.
 
 /**
  * Extract floating image exclusion zones from all blocks.
@@ -924,7 +705,7 @@ function extractFloatingZones(blocks: FlowBlock[], contentWidth: number): Floati
     const floating = tableBlock.floating;
     if (!floating) continue;
 
-    const tableMeasure = measureTableBlock(tableBlock, contentWidth);
+    const tableMeasure = measureTableBlock(tableBlock, contentWidth, measureBlock);
     const tableWidth = tableMeasure.totalWidth;
     const tableHeight = tableMeasure.totalHeight;
 
@@ -1011,7 +792,7 @@ function measureBlock(
     }
 
     case 'table': {
-      return measureTableBlock(block as TableBlock, contentWidth);
+      return measureTableBlock(block as TableBlock, contentWidth, measureBlock);
     }
 
     case 'image': {
@@ -1048,12 +829,8 @@ function measureBlock(
       return { kind: 'sectionBreak' };
 
     default:
-      // Unknown block type - return empty paragraph measure
-      return {
-        kind: 'paragraph',
-        lines: [],
-        totalHeight: 0,
-      };
+      // Exhaustiveness guard — see FlowBlock in core/layout-engine/types.ts.
+      assertExhaustiveFlowBlock(block, 'react PagedEditor measureBlock');
   }
 }
 
@@ -1156,71 +933,14 @@ function measureBlocks(blocks: FlowBlock[], contentWidth: number | number[]): Me
 
 // HF metrics, visual-bounds helpers, normalizeHeaderFooterMeasureBlocks,
 // and convertHeaderFooterToContent live in
-// `@eigenpal/docx-core/layout-bridge` (headerFooterLayout.ts). This adapter
-// just hands its `measureBlocks` callback into the core helper so the core
-// pipeline runs without dragging in Canvas/font-metric dependencies.
+// `@eigenpal/docx-editor-core/layout-bridge` (headerFooterLayout.ts). This
+// adapter just hands its `measureBlocks` callback into the core helper so
+// the core pipeline runs without dragging in Canvas/font-metric deps.
 
-// =============================================================================
-// FOOTNOTE HELPERS
-// =============================================================================
-//
-// Footnote conversion logic now lives in core (`@eigenpal/docx-core/layout-
-// bridge`). This adapter just hands its `measureBlocks` callback over so the
-// core pipeline can run without dragging in Canvas/font-metric dependencies.
-
-/**
- * Build per-page footnote render items from page footnote mapping.
- */
-function buildFootnoteRenderItems(
-  pageFootnoteMap: Map<number, number[]>,
-  footnoteContentMap: Map<number, FootnoteContent>,
-  doc: Document | null
-): Map<number, FootnoteRenderItem[]> {
-  const result = new Map<number, FootnoteRenderItem[]>();
-  if (!doc?.package?.footnotes) return result;
-
-  // Build lookup for footnote text
-  const fnLookup = new Map<number, Footnote>();
-  for (const fn of doc.package.footnotes) {
-    if (fn.noteType && fn.noteType !== 'normal') continue;
-    fnLookup.set(fn.id, fn);
-  }
-
-  for (const [pageNumber, footnoteIds] of pageFootnoteMap) {
-    const items: FootnoteRenderItem[] = [];
-
-    for (const fnId of footnoteIds) {
-      const fn = fnLookup.get(fnId);
-      if (!fn) continue;
-
-      const content = footnoteContentMap.get(fnId);
-      const displayNum = content?.displayNumber ?? 0;
-      const text = getFootnoteText(fn);
-
-      items.push({
-        displayNumber: String(displayNum),
-        text,
-        content,
-      });
-    }
-
-    if (items.length > 0) {
-      result.set(pageNumber, items);
-    }
-  }
-
-  return result;
-}
-
-function footnoteReservedHeightsEqual(a: Map<number, number>, b: Map<number, number>): boolean {
-  if (a.size !== b.size) return false;
-
-  for (const [pageNumber, height] of a) {
-    if (b.get(pageNumber) !== height) return false;
-  }
-
-  return true;
-}
+// Footnote conversion + per-page render items live in core
+// (`@eigenpal/docx-editor-core/layout-bridge`). This adapter just hands
+// its `measureBlocks` callback into the pipeline; no per-renderer
+// shadow stack here anymore.
 
 // =============================================================================
 // COMPONENT
@@ -1645,10 +1365,6 @@ const PagedEditorComponent = forwardRef<PagedEditorRef, PagedEditorProps>(
           if (hasFootnotes) {
             // Pass 1: Layout without footnote space to determine page assignments
             const pass1Layout = layoutDocument(newBlocks, newMeasures, layoutOpts);
-            newLayout = pass1Layout;
-
-            // Map footnote refs to pages
-            pageFootnoteMap = mapFootnotesToPages(pass1Layout.pages, footnoteRefs);
 
             // Build footnote content via the core pipeline. Styles + theme
             // thread through so footnotes containing themed shading or
@@ -1666,59 +1382,18 @@ const PagedEditorComponent = forwardRef<PagedEditorRef, PagedEditorProps>(
               }
             );
 
-            // Calculate per-page reserved heights
-            let footnoteReservedHeights = calculateFootnoteReservedHeights(
-              pageFootnoteMap,
-              footnoteContentMap
-            );
-
-            // Pass 2+: Layout with reserved heights. Reserving footnote space
-            // can move a reference to another page, so keep remapping until
-            // the final page->height contract is the same one used by layout.
-            if (footnoteReservedHeights.size > 0) {
-              const maxFootnoteLayoutPasses = 6;
-              let footnoteLayoutStabilized = false;
-              for (let pass = 0; pass < maxFootnoteLayoutPasses; pass++) {
-                newLayout = layoutDocument(newBlocks, newMeasures, {
-                  ...layoutOpts,
-                  footnoteReservedHeights,
-                });
-
-                const nextPageFootnoteMap = mapFootnotesToPages(newLayout.pages, footnoteRefs);
-                const nextFootnoteReservedHeights = calculateFootnoteReservedHeights(
-                  nextPageFootnoteMap,
-                  footnoteContentMap
-                );
-
-                pageFootnoteMap = nextPageFootnoteMap;
-                if (
-                  footnoteReservedHeightsEqual(footnoteReservedHeights, nextFootnoteReservedHeights)
-                ) {
-                  footnoteReservedHeights = nextFootnoteReservedHeights;
-                  footnoteLayoutStabilized = true;
-                  break;
-                }
-
-                footnoteReservedHeights = nextFootnoteReservedHeights;
-              }
-              if (!footnoteLayoutStabilized) {
-                newLayout = layoutDocument(newBlocks, newMeasures, {
-                  ...layoutOpts,
-                  footnoteReservedHeights,
-                });
-                pageFootnoteMap = mapFootnotesToPages(newLayout.pages, footnoteRefs);
-              }
-
-              // Store footnoteIds on each page for rendering
-              for (const [pageNum, fnIds] of pageFootnoteMap) {
-                const page = newLayout.pages.find((p) => p.number === pageNum);
-                if (page) {
-                  page.footnoteIds = fnIds;
-                }
-              }
-            } else {
-              newLayout = pass1Layout;
-            }
+            // Pass 2+: multi-pass convergence loop lives in core so the
+            // React + Vue adapters stay in lockstep.
+            const stabilized = stabilizeFootnoteLayout({
+              blocks: newBlocks,
+              measures: newMeasures,
+              layoutOpts,
+              footnoteRefs,
+              footnoteContentMap,
+              initialLayout: pass1Layout,
+            });
+            newLayout = stabilized.layout;
+            pageFootnoteMap = stabilized.pageFootnoteMap;
           } else {
             // No footnotes — single pass
             newLayout = layoutDocument(newBlocks, newMeasures, layoutOpts);
@@ -2502,32 +2177,14 @@ const PagedEditorComponent = forwardRef<PagedEditorRef, PagedEditorProps>(
      * Find the closest image element from a click target.
      * Returns the element with data-pm-start if it's an image, or null.
      */
-    const findImageElement = useCallback((target: HTMLElement): HTMLElement | null => {
-      const IMAGE_CONTAINER_CLASSES = [
-        'layout-block-image',
-        'layout-image',
-        'layout-page-floating-image',
-      ];
-      const isImageContainer = (el: HTMLElement) =>
-        !!el.dataset.pmStart && IMAGE_CONTAINER_CLASSES.some((c) => el.classList.contains(c));
-
-      // Inline images: <img class="layout-run layout-run-image" data-pm-start="X">
-      if (target.tagName === 'IMG' && target.classList.contains('layout-run-image')) {
-        return target;
-      }
-      // Click on <img> inside a container div, or directly on the container
-      if (
-        target.tagName === 'IMG' &&
-        target.parentElement &&
-        isImageContainer(target.parentElement)
-      ) {
-        return target.parentElement;
-      }
-      if (isImageContainer(target)) {
-        return target;
-      }
-      return null;
-    }, []);
+    // `findImageElement` is shared between adapters; lives in core's
+    // `layout-painter/imageLayout.ts` next to the rest of the rendered-
+    // image hit-test taxonomy (LAYOUT_IMAGE_CLASSES + hitTestImage).
+    // useCallback wrapper keeps the prop-stable identity.
+    const findImageElement = useCallback(
+      (target: HTMLElement): HTMLElement | null => coreFindImageElement(target),
+      []
+    );
 
     /**
      * AbortController shared by every in-flight scroll's rAF chain. Aborted
@@ -4050,7 +3707,7 @@ const PagedEditorComponent = forwardRef<PagedEditorRef, PagedEditorProps>(
 
     // Calculate total height for scroll
     const totalHeight = useMemo(() => {
-      if (!layout) return DEFAULT_PAGE_HEIGHT + 48;
+      if (!layout) return DEFAULT_PAGE_HEIGHT_PX + 48;
       const numPages = layout.pages.length;
       const pagesHeight = layout.pages.reduce((sum, page) => sum + page.size.h, 0);
       return pagesHeight + (numPages - 1) * pageGap + 48;

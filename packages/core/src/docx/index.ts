@@ -8,7 +8,7 @@
  * The named exports below are the public API contract. Adding a parser
  * helper to a source module does not automatically make it public — it
  * must be added to this barrel to be reachable from
- * `@eigenpal/docx-core/docx`.
+ * `@eigenpal/docx-editor-core/docx`.
  */
 
 // Top-level archive I/O
@@ -169,3 +169,8 @@ export {
   getTextBoxOutlineWidthPx,
 } from './textBoxParser';
 export type { ParagraphParserFn, TableParserFn } from './textBoxParser';
+
+// Reply-range marker injection — pre-serialization step that
+// synthesizes commentRange markers for reply comments. Pure data
+// transform; both adapters call it before saving.
+export { injectReplyRangeMarkers, injectTCReplyRangeMarkers } from './injectReplyRangeMarkers';

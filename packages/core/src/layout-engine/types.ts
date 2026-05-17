@@ -530,7 +530,15 @@ export type TextBoxBlock = {
 };
 
 /**
- * Union of all flow block types (input to layout engine).
+ * Union of every block kind the layout engine knows about.
+ *
+ * Three switches over `block.kind` must stay in sync with this type:
+ * - `runLayoutPipeline` in `layout-engine/index.ts` (this package)
+ * - `measureBlock` in `packages/react/src/paged-editor/PagedEditor.tsx`
+ * - `measureBlock` in `packages/vue/src/composables/useDocxEditor.ts`
+ *
+ * All three end in `assertExhaustiveFlowBlock(block, '<site>')` so adding
+ * a new variant here without updating every site is a typecheck error.
  */
 export type FlowBlock =
   | ParagraphBlock
@@ -540,6 +548,21 @@ export type FlowBlock =
   | SectionBreakBlock
   | PageBreakBlock
   | ColumnBreakBlock;
+
+/**
+ * Exhaustiveness guard for `FlowBlock`-shaped switches. Call from the
+ * `default` arm with the still-typed value; TypeScript will refuse to
+ * compile if any variant of `FlowBlock` was missed. The thrown error
+ * names the calling site so runtime failures (e.g. an old adapter
+ * compiled against a newer core) point future debuggers at the contract.
+ */
+export function assertExhaustiveFlowBlock(block: never, site: string): never {
+  const kind = (block as { kind?: string }).kind ?? '<unknown>';
+  throw new Error(
+    `${site}: unhandled FlowBlock kind "${kind}". ` +
+      `Add the case alongside the other FlowBlock switches (see types.ts).`
+  );
+}
 
 // =============================================================================
 // MEASURES - Measurement results for blocks

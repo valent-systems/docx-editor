@@ -30,6 +30,7 @@ export {
   isHyperlinkActive,
   getHyperlinkAttrs,
   getSelectedText,
+  findHyperlinkRangeAt,
   setHyperlink,
   removeHyperlink,
   insertHyperlink,

@@ -29,6 +29,7 @@ import type {
   TextBoxFragment,
   SectionBreakBlock,
 } from './types';
+import { assertExhaustiveFlowBlock } from './types';
 
 import { createPaginator } from './paginator';
 import {
@@ -329,6 +330,10 @@ export function layoutDocument(
         sectionIdx++;
         break;
       }
+
+      default:
+        // Exhaustiveness guard — see FlowBlock in types.ts.
+        assertExhaustiveFlowBlock(block, 'runLayoutPipeline');
     }
   }
 

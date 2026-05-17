@@ -24,6 +24,7 @@ export {
   isHyperlinkActive,
   getHyperlinkAttrs,
   getSelectedText,
+  findHyperlinkRangeAt,
 } from '../extensions/marks/HyperlinkExtension';
 
 // ============================================================================

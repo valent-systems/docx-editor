@@ -19,14 +19,41 @@ import type {
   ParagraphBlock,
   Measure,
   Page,
+  Layout,
   FootnoteContent,
 } from '../layout-engine/types';
-import type { Footnote, StyleDefinitions, Theme } from '../types/document';
+import { layoutDocument, type LayoutOptions } from '../layout-engine';
+import type { Document, Footnote, StyleDefinitions, Theme } from '../types/document';
+import type { FootnoteRenderItem } from '../layout-painter';
 import { footnoteToProseDoc } from '../prosemirror/conversion/toProseDoc';
 import { toFlowBlocks } from './toFlowBlocks';
+import { getFootnoteText } from '../docx/footnoteParser';
 
 /** Separator line height + vertical padding in pixels. */
 export const FOOTNOTE_SEPARATOR_HEIGHT = 12;
+
+/**
+ * Hard cap on the multi-pass footnote layout loop. Reserving footnote
+ * space can move a reference to another page, so adapters keep remapping
+ * until the page→height contract is stable. Dense layouts converge in
+ * 2–3 passes in practice; 6 is a safe ceiling.
+ */
+export const MAX_FOOTNOTE_LAYOUT_PASSES = 6;
+
+/**
+ * Compare two per-page footnote reservation maps. Used by the React +
+ * Vue adapters to detect when the multi-pass loop has converged.
+ */
+export function footnoteReservedHeightsEqual(
+  a: Map<number, number>,
+  b: Map<number, number>
+): boolean {
+  if (a.size !== b.size) return false;
+  for (const [pageNumber, height] of a) {
+    if (b.get(pageNumber) !== height) return false;
+  }
+  return true;
+}
 
 /**
  * Default footnote font size in points. Word's built-in "Footnote Text"
@@ -314,4 +341,140 @@ export function calculateFootnoteReservedHeights(
   }
 
   return reserved;
+}
+
+// ============================================================================
+// 4b. Multi-pass footnote layout convergence
+// ============================================================================
+
+export interface StabilizeFootnoteLayoutArgs {
+  blocks: FlowBlock[];
+  measures: Measure[];
+  layoutOpts: LayoutOptions;
+  footnoteRefs: Array<{ footnoteId: number; pmPos: number }>;
+  footnoteContentMap: Map<number, FootnoteContent>;
+  /** First-pass layout already computed by the caller without reserved heights. */
+  initialLayout: Layout;
+}
+
+export interface StabilizeFootnoteLayoutResult {
+  layout: Layout;
+  pageFootnoteMap: Map<number, number[]>;
+  /** True if the loop converged before hitting MAX_FOOTNOTE_LAYOUT_PASSES. */
+  converged: boolean;
+}
+
+/**
+ * Run the multi-pass footnote layout loop. Reserving footnote space on a
+ * page can move a reference to another page, which changes the reservation,
+ * which can move references again. Iterate until the page→height contract
+ * is the same one used by the latest layout, or `MAX_FOOTNOTE_LAYOUT_PASSES`
+ * passes have run.
+ *
+ * Lives in core so the React + Vue adapters call the same loop and stay in
+ * lockstep on convergence behaviour. Writes `page.footnoteIds` onto each
+ * page in the returned layout so renderers can paint footnote areas.
+ */
+export function stabilizeFootnoteLayout(
+  args: StabilizeFootnoteLayoutArgs
+): StabilizeFootnoteLayoutResult {
+  const { blocks, measures, layoutOpts, footnoteRefs, footnoteContentMap, initialLayout } = args;
+
+  let pageFootnoteMap = mapFootnotesToPages(initialLayout.pages, footnoteRefs);
+  let footnoteReservedHeights = calculateFootnoteReservedHeights(
+    pageFootnoteMap,
+    footnoteContentMap
+  );
+
+  if (footnoteReservedHeights.size === 0) {
+    return { layout: initialLayout, pageFootnoteMap, converged: true };
+  }
+
+  let newLayout = initialLayout;
+  let converged = false;
+  for (let pass = 0; pass < MAX_FOOTNOTE_LAYOUT_PASSES; pass++) {
+    newLayout = layoutDocument(blocks, measures, {
+      ...layoutOpts,
+      footnoteReservedHeights,
+    });
+
+    const nextPageFootnoteMap = mapFootnotesToPages(newLayout.pages, footnoteRefs);
+    const nextFootnoteReservedHeights = calculateFootnoteReservedHeights(
+      nextPageFootnoteMap,
+      footnoteContentMap
+    );
+
+    pageFootnoteMap = nextPageFootnoteMap;
+    if (footnoteReservedHeightsEqual(footnoteReservedHeights, nextFootnoteReservedHeights)) {
+      footnoteReservedHeights = nextFootnoteReservedHeights;
+      converged = true;
+      break;
+    }
+    footnoteReservedHeights = nextFootnoteReservedHeights;
+  }
+
+  if (!converged) {
+    newLayout = layoutDocument(blocks, measures, {
+      ...layoutOpts,
+      footnoteReservedHeights,
+    });
+    pageFootnoteMap = mapFootnotesToPages(newLayout.pages, footnoteRefs);
+    console.warn(
+      `[docx-editor] footnote layout did not stabilize within ${MAX_FOOTNOTE_LAYOUT_PASSES} passes; ` +
+        'settling with best-effort reservation. If footnotes appear misplaced, please file a bug with the document.'
+    );
+  }
+
+  for (const [pageNum, fnIds] of pageFootnoteMap) {
+    const page = newLayout.pages.find((p) => p.number === pageNum);
+    if (page) page.footnoteIds = fnIds;
+  }
+
+  return { layout: newLayout, pageFootnoteMap, converged };
+}
+
+// ============================================================================
+// 5. Build per-page render items
+// ============================================================================
+
+/**
+ * Turn the page→footnote-id map into the per-page render payload that
+ * `renderPages` consumes via `footnotesByPage`. Skips non-`normal` notes
+ * (separators, continuation notices), reads the display number out of the
+ * content map, and pulls plain text via `getFootnoteText`.
+ *
+ * Lives in core (not in either adapter) so React + Vue both call the
+ * same helper — same rule as the rest of this module.
+ */
+export function buildFootnoteRenderItems(
+  pageFootnoteMap: Map<number, number[]>,
+  footnoteContentMap: Map<number, FootnoteContent>,
+  doc: Document | null
+): Map<number, FootnoteRenderItem[]> {
+  const result = new Map<number, FootnoteRenderItem[]>();
+  if (!doc?.package?.footnotes) return result;
+
+  const fnLookup = new Map<number, Footnote>();
+  for (const fn of doc.package.footnotes) {
+    if (fn.noteType && fn.noteType !== 'normal') continue;
+    fnLookup.set(fn.id, fn);
+  }
+
+  for (const [pageNumber, footnoteIds] of pageFootnoteMap) {
+    const items: FootnoteRenderItem[] = [];
+    for (const fnId of footnoteIds) {
+      const fn = fnLookup.get(fnId);
+      if (!fn) continue;
+      const content = footnoteContentMap.get(fnId);
+      const displayNum = content?.displayNumber ?? 0;
+      items.push({
+        displayNumber: String(displayNum),
+        text: getFootnoteText(fn),
+        content,
+      });
+    }
+    if (items.length > 0) result.set(pageNumber, items);
+  }
+
+  return result;
 }

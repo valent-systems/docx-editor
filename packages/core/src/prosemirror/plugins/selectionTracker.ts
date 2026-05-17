@@ -8,6 +8,7 @@
  * - Selection range information
  */
 
+import type { Mark } from 'prosemirror-model';
 import { Plugin, PluginKey, type EditorState } from 'prosemirror-state';
 import type { EditorView } from 'prosemirror-view';
 import type { TextFormatting, ParagraphFormatting } from '../../types/document';
@@ -156,11 +157,29 @@ export function extractSelectionContext(state: EditorState): SelectionContext {
  * Extract text formatting from current selection/cursor marks
  */
 function extractTextFormatting(state: EditorState): TextFormatting {
-  const { selection } = state;
-  const { empty, $from } = selection;
+  const { selection, doc } = state;
+  const { empty, $from, from, to } = selection;
 
-  // Get marks: stored marks take precedence, then marks at cursor
-  const marks = state.storedMarks || (empty ? $from.marks() : []);
+  // Marks at the selection. For a non-empty range, `$from.marks()` returns
+  // the LEFT-side marks when `from` sits on a mark boundary — read marks
+  // from the first text node inside the range instead.
+  let marks = state.storedMarks;
+  if (!marks) {
+    if (empty) {
+      marks = $from.marks();
+    } else {
+      let inside: readonly Mark[] | null = null;
+      doc.nodesBetween(from, to, (node) => {
+        if (inside) return false;
+        if (node.isText) {
+          inside = node.marks;
+          return false;
+        }
+        return true;
+      });
+      marks = inside ?? $from.marks();
+    }
+  }
   const formatting: TextFormatting = {};
 
   for (const mark of marks) {

@@ -3,7 +3,7 @@
  *
  * The named exports below are the public API contract. Adding a helper
  * to a source module does not automatically make it public — it must
- * be added to this barrel to be reachable from `@eigenpal/docx-core/utils`.
+ * be added to this barrel to be reachable from `@eigenpal/docx-editor-core/utils`.
  */
 
 // Unit conversion
@@ -235,3 +235,17 @@ export {
   createTripleClickParagraphSelector,
 } from './textSelection';
 export type { WordSelectionResult } from './textSelection';
+
+// Sidebar geometry — shared by both adapters so page-shift + card-gap math stay consistent.
+export {
+  SIDEBAR_WIDTH,
+  SIDEBAR_PAGE_GAP,
+  SIDEBAR_DOCUMENT_SHIFT,
+  MIN_CARD_GAP,
+} from './sidebarConstants';
+
+// File-input reader — shared between every adapter's `<input type=file>`
+// → `loadBuffer` glue so filename normalization and the input-reset
+// trick can't drift between React, Vue, or any future framework host.
+export { readDocxFileFromInput } from './readDocxFile';
+export type { ReadDocxFileResult } from './readDocxFile';

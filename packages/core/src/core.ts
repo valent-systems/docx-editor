@@ -1,5 +1,5 @@
 /**
- * @eigenpal/docx-core (default entry point)
+ * @eigenpal/docx-editor-core (default entry point)
  *
  * Fat barrel that re-exports the parser, serializer, agent, plugin
  * registry, and the most-used types. No React/DOM imports.
@@ -12,7 +12,7 @@
  *
  * @example
  * ```ts
- * import { parseDocx, serializeDocx, resolveColor } from '@eigenpal/docx-core';
+ * import { parseDocx, serializeDocx, resolveColor } from '@eigenpal/docx-editor-core';
  * ```
  */
 
@@ -333,3 +333,36 @@ export type {
   EditorCoordinatorOptions,
   EditorCoordinatorSnapshot,
 } from './managers';
+
+// ============================================================================
+// LAYOUT BRIDGE (Adapter Authoring)
+// ============================================================================
+//
+// Helpers shared by the React + Vue adapters and available to third-party
+// adapter authors. The full pipeline (page mapping, content conversion,
+// multi-pass convergence) lives in core so every adapter calls the same
+// code and stays in lockstep on layout behaviour.
+
+export {
+  collectFootnoteRefs,
+  mapFootnotesToPages,
+  calculateFootnoteReservedHeights,
+  buildFootnoteContentMap,
+  buildFootnoteRenderItems,
+  footnoteReservedHeightsEqual,
+  stabilizeFootnoteLayout,
+  convertHeaderFooterToContent,
+  FOOTNOTE_SEPARATOR_HEIGHT,
+  MAX_FOOTNOTE_LAYOUT_PASSES,
+} from './layout-bridge';
+
+export type {
+  MeasureBlocksFn,
+  ConvertFootnoteOptions,
+  StabilizeFootnoteLayoutArgs,
+  StabilizeFootnoteLayoutResult,
+  HeaderFooterMetrics,
+  ConvertHeaderFooterOptions,
+} from './layout-bridge';
+
+export type { FlowBlock, Layout, Measure, Page, FootnoteContent } from './layout-engine/types';

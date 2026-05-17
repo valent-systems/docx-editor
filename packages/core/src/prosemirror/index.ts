@@ -84,6 +84,7 @@ export {
   isHyperlinkActive,
   getHyperlinkAttrs,
   getSelectedText,
+  findHyperlinkRangeAt,
   setHyperlink,
   removeHyperlink,
   insertHyperlink,
@@ -160,3 +161,4 @@ export type { TableContextInfo, BorderPreset } from './commands';
 /** Word `w14:paraId` → ProseMirror position before matching paragraph. */
 export { findStartPosForParaId } from './utils/findStartPosForParaId';
 export { findParagraphByParaId } from './utils/findParagraphByParaId';
+export { LayoutSelectionGate } from './utils/LayoutSelectionGate';

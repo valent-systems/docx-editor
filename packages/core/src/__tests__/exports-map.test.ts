@@ -83,13 +83,73 @@ describe('package.json exports map', () => {
     expect(missing).toEqual([]);
   });
 
-  test('surface stays curated — no silent growth beyond the required + 4 top-level entries', () => {
-    // Top-level: '.', './headless', './core-plugins', './mcp'.
-    // Anything else must be on the required list (which the test above asserts is present).
-    const TOP_LEVEL = 4;
-    const REQUIRED_COUNT = 17;
-    const declared = Object.keys(pkg.exports).length;
-    expect(declared).toBeLessThanOrEqual(TOP_LEVEL + REQUIRED_COUNT);
+  test('surface stays curated — no silent growth beyond explicitly approved subpaths', () => {
+    const approved = new Set([
+      '.',
+      './headless',
+      './core-plugins',
+      './mcp',
+      './prosemirror',
+      './prosemirror/extensions',
+      './prosemirror/conversion',
+      './prosemirror/commands',
+      './prosemirror/plugins',
+      './prosemirror/utils/ClickPositionResolver',
+      './prosemirror/utils/extractTrackedChanges',
+      './prosemirror/utils/LayoutSelectionGate',
+      './prosemirror/utils/PointerEventHandler',
+      './prosemirror/utils/visualLineNavigation',
+      './prosemirror/extensions/nodes/TableExtension',
+      './prosemirror/template/prosemirror-plugin',
+      './prosemirror/editor.css',
+      './docx',
+      './docx/wrapTypes',
+      './docx/serializer',
+      './agent',
+      './layout-engine',
+      './layout-painter',
+      './layout-bridge',
+      './plugin-api',
+      './plugin-api/RenderedDomContext',
+      './plugin-api/resolveItemPositions',
+      './plugin-api/types',
+      './types/document',
+      './types/content',
+      './types/agentApi',
+      './utils',
+      './utils/cardStyles',
+      './utils/comments',
+      './utils/findReplace',
+      './utils/findVerticalScrollParent',
+      './utils/fontOptions',
+      './utils/headingCollector',
+      './utils/highlightColors',
+      './utils/listState',
+      './utils/reportIssue',
+      './utils/sidebarConstants',
+      './utils/textSelection',
+      './utils/units',
+      './docx/parser',
+      './docx/rezip',
+      './layout-bridge/clickToPositionDom',
+      './layout-bridge/measuring',
+      './layout-bridge/tableInsertHover',
+      './layout-bridge/toFlowBlocks',
+      './layout-engine/types',
+      './layout-painter/renderPage',
+      './managers/AutoSaveManager',
+      './managers/TableSelectionManager',
+      './managers/types',
+      './prosemirror/commands/formatting',
+      './prosemirror/commands/pageBreak',
+      './prosemirror/commands/paragraph',
+      './prosemirror/conversion/fromProseDoc',
+      './prosemirror/plugins/selectionTracker',
+      './prosemirror/schema',
+      './prosemirror/styles',
+    ]);
+    const unexpected = Object.keys(pkg.exports).filter((subpath) => !approved.has(subpath));
+    expect(unexpected).toEqual([]);
   });
 
   test('exports map does not regress to ./* wildcard', () => {

@@ -67,6 +67,7 @@ export type { HeaderFooterContent, RenderPageOptions, FootnoteRenderItem } from 
 export {
   LAYOUT_IMAGE_CLASSES,
   hitTestImage,
+  findImageElement,
   captureInlinePositionEmu,
   deriveLayoutChoice,
   IMAGE_LAYOUT_OPTIONS,

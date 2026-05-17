@@ -1,21 +1,21 @@
-# @eigenpal/docx-core
+# @eigenpal/docx-editor-core
 
-Framework-agnostic engine that powers [`@eigenpal/docx-js-editor`](https://www.npmjs.com/package/@eigenpal/docx-js-editor) (React) and any other adapter you want to build. Parses DOCX, builds the document model, runs ProseMirror, and renders Word-fidelity pages.
+Framework-agnostic engine that powers [`@eigenpal/docx-editor-react`](https://www.npmjs.com/package/@eigenpal/docx-editor-react) (React) and any other adapter you want to build. Parses DOCX, builds the document model, runs ProseMirror, and renders Word-fidelity pages.
 
 This package is consumed via curated subpath imports — pick the smallest entry point that gives you what you need, since each one tree-shakes independently.
 
 ## Which entry point?
 
 ```
-@eigenpal/docx-core                  ─ default fat barrel (no DOM)
-@eigenpal/docx-core/headless         ─ same as `.`, named for Node.js use
-@eigenpal/docx-core/core-plugins     ─ plugin registry + base plugins
-@eigenpal/docx-core/mcp              ─ Model Context Protocol server
+@eigenpal/docx-editor-core                  ─ default fat barrel (no DOM)
+@eigenpal/docx-editor-core/headless         ─ same as `.`, named for Node.js use
+@eigenpal/docx-editor-core/core-plugins     ─ plugin registry + base plugins
+@eigenpal/docx-editor-core/mcp              ─ Model Context Protocol server
 ```
 
 ### Most users (build a Word-fidelity editor)
 
-Use the React adapter directly: `npm i @eigenpal/docx-js-editor`. The subpaths below are for adapter authors and advanced integrations.
+Use the React adapter directly: `npm i @eigenpal/docx-editor-react`. The subpaths below are for adapter authors and advanced integrations.
 
 ### Adapter authors (Solid, Vue, Svelte, custom UI)
 
@@ -36,7 +36,7 @@ Wire these together:
 ### Want headless agents (no UI)?
 
 ```ts
-import { DocumentAgent, executeCommand } from '@eigenpal/docx-core/agent';
+import { DocumentAgent, executeCommand } from '@eigenpal/docx-editor-core/agent';
 ```
 
 The `./agent` subpath gives you the full `DocumentAgent` API plus the `AgentCommand` types — useful for backend automation, batch processing, or building agentic workflows on top of DOCX without rendering.
@@ -44,7 +44,7 @@ The `./agent` subpath gives you the full `DocumentAgent` API plus the `AgentComm
 ### Just need a utility?
 
 ```ts
-import { twipsToPixels, resolveColor } from '@eigenpal/docx-core/utils';
+import { twipsToPixels, resolveColor } from '@eigenpal/docx-editor-core/utils';
 ```
 
 The `./utils` subpath has a curated set of unit conversions, color resolution, font loading, clipboard handling, template processing, and selection helpers.
@@ -52,9 +52,9 @@ The `./utils` subpath has a curated set of unit conversions, color resolution, f
 ### Just need a type?
 
 ```ts
-import type { Document, Paragraph } from '@eigenpal/docx-core/types/document';
-import type { Comment } from '@eigenpal/docx-core/types/content';
-import type { AgentCommand } from '@eigenpal/docx-core/types/agentApi';
+import type { Document, Paragraph } from '@eigenpal/docx-editor-core/types/document';
+import type { Comment } from '@eigenpal/docx-editor-core/types/content';
+import type { AgentCommand } from '@eigenpal/docx-editor-core/types/agentApi';
 ```
 
 ## Stability

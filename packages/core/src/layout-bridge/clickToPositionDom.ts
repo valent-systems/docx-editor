@@ -9,6 +9,8 @@
  * enabling binary search to find exact character positions.
  */
 
+import { findBodyPmSpans } from './findBodyPmSpans';
+
 /**
  * Find ProseMirror position from a click using DOM-based detection.
  *
@@ -364,8 +366,12 @@ export function getSelectionRectsFromDom(
 ): DomSelectionRect[] {
   const rects: DomSelectionRect[] = [];
 
-  // Find all spans that intersect with the selection
-  const spans = container.querySelectorAll('span[data-pm-start][data-pm-end]');
+  // Find all body spans that intersect with the selection. Scoped via
+  // `findBodyPmSpans` so HF spans (whose PM positions live in a
+  // separate document) don't bleed selection rects into headers when
+  // body PM positions happen to overlap. Same fix as #406 / #408 on
+  // the React-side selection-resolution path.
+  const spans = findBodyPmSpans(container);
 
   for (const span of Array.from(spans)) {
     const spanEl = span as HTMLElement;
@@ -434,8 +440,9 @@ export function getCaretPositionFromDom(
   pmPos: number,
   overlayRect: DOMRect
 ): DomCaretPosition | null {
-  // Find span containing this position
-  const spans = container.querySelectorAll('span[data-pm-start][data-pm-end]');
+  // Body-scoped span lookup so HF spans don't mis-resolve the caret
+  // when a body PM position happens to fall within an HF range.
+  const spans = findBodyPmSpans(container);
 
   for (const span of Array.from(spans)) {
     const spanEl = span as HTMLElement;

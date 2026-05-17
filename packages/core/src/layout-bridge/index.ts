@@ -82,8 +82,18 @@ export {
   applyFootnotePresentation,
   convertFootnoteToContent,
   buildFootnoteContentMap,
+  buildFootnoteRenderItems,
+  footnoteReservedHeightsEqual,
+  stabilizeFootnoteLayout,
+  FOOTNOTE_SEPARATOR_HEIGHT,
+  MAX_FOOTNOTE_LAYOUT_PASSES,
 } from './footnoteLayout';
-export type { MeasureBlocksFn, ConvertFootnoteOptions } from './footnoteLayout';
+export type {
+  MeasureBlocksFn,
+  ConvertFootnoteOptions,
+  StabilizeFootnoteLayoutArgs,
+  StabilizeFootnoteLayoutResult,
+} from './footnoteLayout';
 
 // Header / footer layout helpers — same pattern as footnote: full pipeline
 // (normalization + conversion) lives in core, with adapter-supplied
@@ -113,3 +123,17 @@ export {
   findBodyPmAnchors,
   findBodyPmAnchor,
 } from './findBodyPmSpans';
+
+// Per-table measurement (recursive over cell content via callback).
+export { measureTableBlock, measureTableCellBlockVisualHeight } from './measureTable';
+
+// Section properties → page geometry + header/footer resolution.
+export {
+  getPageSize,
+  getMargins,
+  resolveHeaderFooter,
+  DEFAULT_PAGE_WIDTH_PX,
+  DEFAULT_PAGE_HEIGHT_PX,
+  DEFAULT_BODY_MARGIN_PX,
+  DEFAULT_HF_DISTANCE_PX,
+} from './sectionGeometry';

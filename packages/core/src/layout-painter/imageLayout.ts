@@ -63,6 +63,28 @@ export function hitTestImage(target: EventTarget | null): ImageHitTestResult | n
   return { pos, imageEl };
 }
 
+/**
+ * Walk up from a click target to the nearest rendered image element, returning
+ * just the element (no PM position parsing). Used by the left-click selection
+ * path in both adapters — `data-pm-start` is read separately by callers that
+ * need the position. Returns the element when the click was directly on an
+ * inline `<img.layout-run-image>` OR inside one of the container classes
+ * registered in `LAYOUT_IMAGE_CLASSES`.
+ */
+export function findImageElement(target: EventTarget | null): HTMLElement | null {
+  if (!(target instanceof HTMLElement)) return null;
+  // Direct hit on an inline `<img class="layout-run-image">` — return it as-is
+  // since the inline image carries its own `data-pm-start` and behaves as the
+  // selection target.
+  if (target.tagName === 'IMG' && target.classList.contains(LAYOUT_IMAGE_CLASSES.runImage)) {
+    return target;
+  }
+  // Otherwise walk up to the nearest image container with `data-pm-start`.
+  const container = target.closest(IMAGE_HIT_SELECTOR) as HTMLElement | null;
+  if (container && container.dataset.pmStart) return container;
+  return null;
+}
+
 // ============================================================================
 // Position capture for inline → anchor transitions
 // ============================================================================
