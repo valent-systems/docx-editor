@@ -6,7 +6,11 @@
 import type { Paragraph } from './paragraph';
 
 /**
- * A comment (w:comment) from comments.xml
+ * A comment from `comments.xml` — the top-level entity for review
+ * comments and replies. `id` matches the inline `CommentRangeStart` /
+ * `CommentRangeEnd` markers that anchor it inside a paragraph; `parentId`
+ * threads replies under their parent; `done` reflects Word's "Resolve"
+ * state (`w15:done`).
  */
 export interface Comment {
   /** Comment ID (matches commentRangeStart/End) */

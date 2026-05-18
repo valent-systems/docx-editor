@@ -81,7 +81,12 @@ export type NumberFormat =
 export type LevelSuffix = 'tab' | 'space' | 'nothing';
 
 /**
- * List level definition
+ * One indentation level of an abstract numbering definition (`w:lvl`).
+ * Carries the number format, the marker template (`lvlText` — e.g.
+ * `"%1.%2."`), the level's paragraph properties (indent, hanging) and
+ * character properties (font, size, color for the marker itself).
+ *
+ * `ilvl` ranges 0-8 in standard Word documents.
  */
 export interface ListLevel {
   /** Level index (0-8) */
@@ -113,7 +118,13 @@ export interface ListLevel {
 }
 
 /**
- * Abstract numbering definition (w:abstractNum)
+ * Abstract numbering definition (`w:abstractNum`) — the reusable template
+ * for a list: which `NumberFormat` at each indentation level, what
+ * marker text, what paragraph/character formatting. Multiple
+ * `NumberingInstance`s (`w:num`) can reference one abstract numbering
+ * to share the template while keeping independent counters.
+ *
+ * See ECMA-376 §17.9.
  */
 export interface AbstractNumbering {
   /** Abstract numbering ID */
@@ -147,7 +158,10 @@ export interface NumberingInstance {
 }
 
 /**
- * Computed list rendering info
+ * Computed list marker for one paragraph — what the layout engine and
+ * painter need to render the "1.", "a)", "•" prefix. Not part of the
+ * wire format; the parser fills this from the `numbering.xml` chain plus
+ * the paragraph's `numPr`. Paragraphs without list rendering omit it.
  */
 export interface ListRendering {
   /** Computed marker text (e.g., "1.", "a)", "•") */
@@ -183,7 +197,10 @@ export interface ListRendering {
 }
 
 /**
- * Complete numbering definitions
+ * Top-level numbering data from `numbering.xml` — the set of abstract
+ * templates and the per-document `NumberingInstance`s that reference
+ * them. Paragraphs reference a `numId` (instance), not an
+ * `abstractNumId` directly.
  */
 export interface NumberingDefinitions {
   /** Abstract numbering definitions */

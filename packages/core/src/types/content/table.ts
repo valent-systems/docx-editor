@@ -12,7 +12,10 @@ import type {
 } from './trackedChange';
 
 /**
- * Table cell
+ * Table cell (`w:tc`). Holds nested block content (paragraphs and nested
+ * tables), cell-level formatting (borders, shading, vertical merge),
+ * tracked property changes, and tracked structural changes for cell
+ * insert/delete/merge operations.
  */
 export interface TableCell {
   type: 'tableCell';
@@ -27,7 +30,9 @@ export interface TableCell {
 }
 
 /**
- * Table row
+ * Table row (`w:tr`) — an ordered list of `TableCell` plus row-level
+ * formatting (height, repeated header, cantSplit) and tracked changes
+ * for inserts/deletes.
  */
 export interface TableRow {
   type: 'tableRow';
@@ -42,7 +47,12 @@ export interface TableRow {
 }
 
 /**
- * Table (w:tbl)
+ * Table (`w:tbl`) — a block-level grid of rows × cells. Tables carry
+ * their own formatting layer (borders, shading, alignment, indent,
+ * floating placement) and an explicit column-width grid in twips. Tables
+ * can nest arbitrarily through `TableCell.content`.
+ *
+ * See ECMA-376 §17.4.
  */
 export interface Table {
   type: 'table';

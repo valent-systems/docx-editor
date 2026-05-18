@@ -6,7 +6,9 @@
 import type { Run } from './run';
 
 /**
- * Hyperlink (w:hyperlink)
+ * Hyperlink (`w:hyperlink`) — wraps runs in a clickable link. External
+ * targets resolve through the relationships part (`rId` → `href`);
+ * internal targets reference a `BookmarkStart` anchor by name.
  */
 export interface Hyperlink {
   type: 'hyperlink';

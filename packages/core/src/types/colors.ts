@@ -26,7 +26,13 @@ export type ThemeColorSlot =
   | 'text2';
 
 /**
- * Color value - can be direct RGB, theme reference, or auto
+ * ECMA-376 color reference — either a direct RGB hex, a theme slot
+ * reference (with optional tint/shade), or `auto` for context-dependent
+ * defaults (usually black for text on light backgrounds). When both
+ * `rgb` and `themeColor` are set, the theme wins on Word import and the
+ * `rgb` acts as a fallback for renderers without theme support.
+ *
+ * See ECMA-376 §17.18.39 (`ST_ThemeColor`).
  */
 export interface ColorValue {
   /** RGB hex value without # (e.g., "FF0000") */
@@ -42,7 +48,12 @@ export interface ColorValue {
 }
 
 /**
- * Border specification for any border (paragraph, table, page)
+ * One side of a border — style, color, width, spacing. Used by paragraph
+ * borders, table borders (per-cell or whole-table), and page borders.
+ * `size` is in eighths of a point (Word's wire format); `space` is in
+ * points.
+ *
+ * See ECMA-376 §17.18.2 (`ST_Border`).
  */
 export interface BorderSpec {
   /** Border style */
@@ -82,7 +93,12 @@ export interface BorderSpec {
 }
 
 /**
- * Shading/background properties
+ * Cell/paragraph/run shading — Word's combined "fill + pattern overlay"
+ * model. `fill` is the solid background; `color` is the pattern overlay
+ * drawn on top; `pattern` selects the pattern type (defaults to
+ * `'clear'` = solid `fill`, no pattern).
+ *
+ * See ECMA-376 §17.4.32 (`CT_Shd`).
  */
 export interface ShadingProperties {
   /** Pattern fill color */

@@ -506,7 +506,9 @@
   ],
   "scripts": {
     "build": "NODE_OPTIONS=--max-old-space-size=8192 tsup && node scripts/copy-assets.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "api:extract": "node scripts/api-extractor.mjs --local",
+    "api:check": "node scripts/api-extractor.mjs"
   },
   "dependencies": {
     "docxtemplater": "^3.50.0",
@@ -526,6 +528,7 @@
     "prosemirror-view": "^1.32.7"
   },
   "devDependencies": {
+    "@microsoft/api-extractor": "^7.50.0",
     "prosemirror-commands": "^1.5.2",
     "prosemirror-dropcursor": "^1.8.2",
     "prosemirror-history": "^1.4.0",

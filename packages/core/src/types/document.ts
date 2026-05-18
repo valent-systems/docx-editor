@@ -207,15 +207,26 @@ export interface DocxPackage {
 }
 
 /**
- * Complete parsed DOCX document
+ * Top-level parsed DOCX document — the result of `parseDocx(buffer)`.
+ *
+ * Wraps the unzipped DOCX package (`document.xml`, `styles.xml`, etc.),
+ * the original buffer for round-trip saves, and any template variables /
+ * parse warnings detected during ingestion.
+ *
+ * @example
+ * ```ts
+ * import { parseDocx } from '@eigenpal/docx-editor-core/headless';
+ * const doc = await parseDocx(buffer);
+ * console.log(doc.package.document.content.length);
+ * ```
  */
 export interface Document {
-  /** DOCX package with all parsed content */
+  /** Parsed DOCX package — body, styles, numbering, theme, media, headers/footers. */
   package: DocxPackage;
-  /** Original ArrayBuffer for round-trip */
+  /** Original DOCX buffer. Kept for round-trip saves that preserve untouched parts. */
   originalBuffer?: ArrayBuffer;
-  /** Detected template variables ({{...}}) */
+  /** Detected docxtemplater variables (e.g. `{name}`, `{address}`). Populated when the document is recognized as a template. */
   templateVariables?: string[];
-  /** Parsing warnings/errors */
+  /** Non-fatal parser diagnostics — malformed parts, unsupported features, fallbacks. */
   warnings?: string[];
 }

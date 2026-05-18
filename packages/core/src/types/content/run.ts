@@ -10,7 +10,9 @@ import type { Shape } from './shape';
 import type { RunPropertyChange } from './trackedChange';
 
 /**
- * Plain text content
+ * Plain text run content (`w:t`). `preserveSpace` mirrors the
+ * `xml:space="preserve"` attribute and matters for runs that begin or end
+ * with whitespace — without it, Word collapses leading/trailing spaces.
  */
 export interface TextContent {
   type: 'text';
@@ -129,7 +131,21 @@ export type RunContent =
   | ShapeContent;
 
 /**
- * A run is a contiguous region of text with the same formatting
+ * A run (`w:r`) — a contiguous span of inline content sharing one set of
+ * character properties (bold, italic, font, color, etc.). Runs are the
+ * atomic unit of character formatting; toggling bold on a selection that
+ * spans different formatting creates new runs.
+ *
+ * See ECMA-376 §17.3.2.
+ *
+ * @example
+ * ```ts
+ * const run: Run = {
+ *   type: 'run',
+ *   formatting: { bold: true },
+ *   content: [{ type: 'text', text: 'Hello' }],
+ * };
+ * ```
  */
 export interface Run {
   type: 'run';

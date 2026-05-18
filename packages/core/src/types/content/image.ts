@@ -101,7 +101,13 @@ export interface ImageCrop {
 }
 
 /**
- * Embedded image (w:drawing)
+ * Embedded image (`w:drawing` with an inline or anchored picture). Carries
+ * the relationship-id pointer to the binary in `word/media/`, its
+ * resolved data URL (`src`), display dimensions, optional crop /
+ * transform / wrap behaviors, and anchor positioning for floating
+ * images.
+ *
+ * See ECMA-376 §20.4 (DrawingML wordprocessingDrawing).
  */
 export interface Image {
   type: 'image';

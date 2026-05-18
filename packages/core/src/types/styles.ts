@@ -22,7 +22,13 @@ import type {
 export type StyleType = 'paragraph' | 'character' | 'numbering' | 'table';
 
 /**
- * Style definition
+ * Style definition from `styles.xml` — a named, reusable bundle of
+ * paragraph and/or character formatting. Word's "Heading 1", "Normal",
+ * "Title", and "List Bullet" are styles; user-defined styles look the
+ * same. `basedOn` chains styles for inheritance; `link` pairs a paragraph
+ * style with a matching character style.
+ *
+ * See ECMA-376 §17.7.4.
  */
 export interface Style {
   /** Style ID */

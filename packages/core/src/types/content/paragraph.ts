@@ -26,7 +26,11 @@ import type { MathEquation } from './math';
 import type { SectionProperties } from './section';
 
 /**
- * Paragraph content types
+ * Inline content that can appear inside a paragraph. Covers runs (text),
+ * hyperlinks, bookmarks, fields, structured document tags, comment range
+ * markers, tracked-change wrappers, and math equations. Every node in
+ * this union carries a `type` discriminator so consumers can narrow at
+ * runtime.
  */
 export type ParagraphContent =
   | Run
@@ -49,7 +53,15 @@ export type ParagraphContent =
   | MathEquation;
 
 /**
- * Paragraph (w:p)
+ * Paragraph (`w:p`) — the primary block-level container in a Word document.
+ *
+ * Every paragraph carries direct formatting (`formatting`), tracked
+ * property changes (`propertyChanges`), inline content (`content`), and
+ * optional list rendering / section break metadata. `paraId` is Word's
+ * stable identifier (`w14:paraId`) and is what `EditorBridge` and the
+ * agent toolkit use to address paragraphs.
+ *
+ * See ECMA-376 §17.3.1.
  */
 export interface Paragraph {
   type: 'paragraph';

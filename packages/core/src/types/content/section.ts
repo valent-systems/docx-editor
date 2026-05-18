@@ -50,7 +50,16 @@ export interface Column {
 }
 
 /**
- * Section properties (w:sectPr)
+ * Section properties (`w:sectPr`) — page geometry, margins, columns,
+ * header/footer references, and page numbering for one section of the
+ * document. Sections are introduced by inline `sectPr` markers on the
+ * terminating paragraph (`Paragraph.sectionProperties`) and the body's
+ * final `sectPr`.
+ *
+ * All distance units are twips (1/20 of a point) on the wire. The layout
+ * engine converts to pixels.
+ *
+ * See ECMA-376 §17.6.
  */
 export interface SectionProperties {
   // Page size
@@ -167,7 +176,12 @@ export interface SectionProperties {
 export type BlockContent = Paragraph | Table | BlockSdt;
 
 /**
- * Section (implicit or explicit based on sectPr)
+ * One section of the document — a `SectionProperties` plus the block
+ * content (`Paragraph`s and `Table`s) that lives under those properties.
+ *
+ * Sections are derived during parse: every paragraph carrying an inline
+ * `sectPr` ends a section, and the body's final `sectPr` defines the
+ * last section. Each section may carry its own headers/footers map.
  */
 export interface Section {
   /** Section properties */
@@ -181,7 +195,12 @@ export interface Section {
 }
 
 /**
- * Document body (w:body)
+ * Document body (`w:body`) — the editable content of the document.
+ *
+ * Contains the ordered block content (paragraphs and tables), the section
+ * layout chain derived from inline `sectPr` markers, the final `sectPr`,
+ * and any document-level comments. This is what most edit operations
+ * mutate; headers/footers/styles live elsewhere in the package.
  */
 export interface DocumentBody {
   /** All content (paragraphs, tables) */
