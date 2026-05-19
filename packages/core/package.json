@@ -507,8 +507,8 @@
   "scripts": {
     "build": "NODE_OPTIONS=--max-old-space-size=8192 tsup && node scripts/copy-assets.mjs",
     "typecheck": "tsc --noEmit",
-    "api:extract": "node scripts/api-extractor.mjs --local",
-    "api:check": "node scripts/api-extractor.mjs"
+    "api:extract": "node ../../scripts/api-extractor.mjs --package @eigenpal/docx-editor-core --local",
+    "api:check": "node ../../scripts/api-extractor.mjs --package @eigenpal/docx-editor-core"
   },
   "dependencies": {
     "docxtemplater": "^3.50.0",
