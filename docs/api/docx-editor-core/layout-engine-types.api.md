@@ -284,6 +284,7 @@ export type MeasuredLine = {
     leftOffset?: number;
     rightOffset?: number;
     segments?: MeasuredLineSegment[];
+    floatSkipBefore?: number;
 };
 
 // @public (undocumented)

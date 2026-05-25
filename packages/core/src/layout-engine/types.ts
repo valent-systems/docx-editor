@@ -603,6 +603,12 @@ export type MeasuredLine = {
   rightOffset?: number;
   /** Optional split segments for centered floating exclusions. */
   segments?: MeasuredLineSegment[];
+  /**
+   * Vertical space inserted before this line to skip past floats that leave
+   * no usable horizontal width at the natural line Y. Painters render this
+   * as marginTop on the line element; measurement adds it to totalHeight.
+   */
+  floatSkipBefore?: number;
 };
 
 export type MeasuredLineSegment = {

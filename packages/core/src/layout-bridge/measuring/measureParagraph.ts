@@ -19,11 +19,14 @@ import type {
   ParagraphSpacing,
 } from '../../layout-engine/types';
 import {
+  findClearLineY,
   getFloatingAvailableWidth,
   getFloatingMargins,
+  MIN_WRAP_SEGMENT_WIDTH,
   type FloatingImageZone,
   type FloatingLineSegmentZone,
 } from './floatingZones';
+
 import { wrapsAroundText } from '../../docx/wrapTypes';
 
 import {
@@ -366,12 +369,34 @@ export function measureParagraph(
 
   // Track cumulative height for floating zone calculations
   let cumulativeHeight = 0;
+  // Lead-skip to attach to the next line that finalizes — set when we hop
+  // past a float that leaves no usable horizontal width at the current Y.
+  let pendingFloatSkip = 0;
 
   // Calculate first line width with floating zone adjustment
-  // Estimate first line height for floating margin calculation
   const estimatedFirstLineHeight = ptToPx(DEFAULT_FONT_SIZE) * DEFAULT_LINE_HEIGHT_MULTIPLIER;
+
+  /**
+   * If floats leave no usable horizontal room at `cumulativeHeight`, advance
+   * past them. Returns the px to skip; both `cumulativeHeight` and
+   * `pendingFloatSkip` are bumped by that amount.
+   */
+  const skipObstructingFloats = (lineHeight: number, lineMaxWidth: number): void => {
+    if (!floatingZones || floatingZones.length === 0) return;
+    const absoluteY = paragraphYOffset + cumulativeHeight;
+    const skip =
+      findClearLineY(absoluteY, lineHeight, floatingZones, lineMaxWidth, MIN_WRAP_SEGMENT_WIDTH) -
+      absoluteY;
+    if (skip > 0) {
+      cumulativeHeight += skip;
+      pendingFloatSkip += skip;
+    }
+  };
+
+  skipObstructingFloats(estimatedFirstLineHeight, baseFirstLineWidth);
+
   const firstLineFloatingMargins = getFloatingMargins(
-    0,
+    cumulativeHeight,
     estimatedFirstLineHeight,
     floatingZones,
     paragraphYOffset
@@ -542,6 +567,10 @@ export function measureParagraph(
     if (currentLine.segmentZones?.length) {
       line.segments = createLineSegments(line, currentLine.segmentZones);
     }
+    if (pendingFloatSkip > 0) {
+      line.floatSkipBefore = pendingFloatSkip;
+      pendingFloatSkip = 0;
+    }
 
     lines.push(line);
 
@@ -612,9 +641,10 @@ export function measureParagraph(
   const startNewLine = (runIndex: number, charIndex: number): void => {
     finalizeLine();
 
-    // Calculate available width for new line based on floating zones
-    // Estimate the new line's height for overlap calculation
+    // Available width depends on the line's Y vs. floating zones.
     const estimatedLineHeight = ptToPx(DEFAULT_FONT_SIZE) * DEFAULT_LINE_HEIGHT_MULTIPLIER;
+    skipObstructingFloats(estimatedLineHeight, bodyContentWidth);
+
     const floatingMargins = getFloatingMargins(
       cumulativeHeight,
       estimatedLineHeight,
@@ -903,8 +933,11 @@ export function measureParagraph(
   // Finalize the last line
   finalizeLine();
 
-  // Calculate total height
-  let totalHeight = lines.reduce((sum, line) => sum + line.lineHeight, 0);
+  // Calculate total height — include floatSkipBefore from lines bumped past floats.
+  let totalHeight = lines.reduce(
+    (sum, line) => sum + line.lineHeight + (line.floatSkipBefore ?? 0),
+    0
+  );
 
   // The renderer wraps a list marker in its own line element when there is no
   // hanging indent reserved for it (matching Word's <w:suff w:val="tab"/>

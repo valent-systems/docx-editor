@@ -159,6 +159,9 @@ export type FloatingTablePosition = {
 };
 
 // @public
+export function floatingTextBoxWrapsText(block: TextBoxFlowAttrs): boolean;
+
+// @public
 export type FlowBlock = ParagraphBlock | TableBlock | ImageBlock | TextBoxBlock | SectionBreakBlock | PageBreakBlock | ColumnBreakBlock;
 
 // @public
@@ -306,6 +309,15 @@ export type ImageRunPosition = {
 };
 
 // @public
+export function isFloatingTextBoxBlock(block: TextBoxFlowAttrs): boolean;
+
+// @public
+export function isFloatingWrapType(wrapType: string | undefined): boolean;
+
+// @public
+export function isWrapNone(wrapType: string | undefined): boolean;
+
+// @public
 export type KeepNextChain = {
     startIndex: number;
     endIndex: number;
@@ -381,6 +393,7 @@ export type MeasuredLine = {
     leftOffset?: number;
     rightOffset?: number;
     segments?: MeasuredLineSegment[];
+    floatSkipBefore?: number;
 };
 
 // @public (undocumented)
@@ -783,6 +796,9 @@ export type TextBoxBlock = {
 };
 
 // @public
+export type TextBoxFlowAttrs = Pick<TextBoxBlock, 'displayMode' | 'wrapType'>;
+
+// @public
 export type TextBoxFragment = FragmentBase & {
     kind: 'textBox';
     height: number;
@@ -806,6 +822,9 @@ export type TextRun = RunFormatting & {
     pmStart?: number;
     pmEnd?: number;
 };
+
+// @public
+export function wrapsAroundText(wrapType: string | undefined): boolean;
 
 // @public (undocumented)
 export type WrapTextDirection = 'bothSides' | 'left' | 'right' | 'largest';

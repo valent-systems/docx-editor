@@ -398,6 +398,13 @@ export function renderParagraphFragment(
       }
     }
 
+    // Lead skip: a line that was pushed past obstructing floats reserves
+    // vertical space above itself via marginTop. measureParagraph adds the
+    // same amount to totalHeight so containers stay sized correctly.
+    if (line.floatSkipBefore && line.floatSkipBefore > 0) {
+      lineEl.style.marginTop = `${line.floatSkipBefore}px`;
+    }
+
     // Apply line-level indentation
     // Indentation is applied per-line for correct text wrapping
     const hasHanging = indent?.hanging && indent.hanging > 0;
