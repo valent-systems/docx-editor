@@ -30,17 +30,19 @@ const XML_DECL = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
 /** Serialize one note element (footnote or endnote share identical structure). */
 function serializeNote(elementName: 'footnote' | 'endnote', note: Footnote | Endnote): string {
   // Verbatim gate (#646 F3): when the note body carried a block-level construct
-  // the model can't represent — block-level w:sdt, bookmarks, or w:customXml —
-  // the parser stored the original `<w:footnote>`/`<w:endnote>` bytes verbatim.
-  // Re-emit them as-is rather than rebuilding from `content` (which would drop
-  // the unmodeled block). This restores pre-#646 fidelity for these notes.
+  // the model can't represent — note-level bookmarks or w:customXml — the parser
+  // stored the original `<w:footnote>`/`<w:endnote>` bytes verbatim. Re-emit them
+  // as-is rather than rebuilding from `content` (which would drop the unmodeled
+  // block). This restores pre-#646 fidelity for these notes. Block-level w:sdt is
+  // NOT gated: it now round-trips through the model (BlockSdt), so notes whose
+  // only "exotic" content is a content control stay fully editable.
   //
   // KNOWN LIMITATION (residual edge): a note that is BOTH edited in the editor
-  // AND carries an unmodeled block can't be both verbatim-copied and
+  // AND carries a bookmark / customXml can't be both verbatim-copied and
   // re-serialized from the edited model. We prefer correctness of the
   // structure: the verbatim bytes win, so an edit to such a note does NOT
-  // persist. Modeled-only notes (plain paragraphs/tables) are unaffected and
-  // remain fully editable.
+  // persist. Notes built from modeled blocks (paragraphs, tables, content
+  // controls) are unaffected and remain fully editable.
   if (note.verbatimXml) {
     return note.verbatimXml;
   }
