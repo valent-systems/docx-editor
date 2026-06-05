@@ -1,13 +1,41 @@
 /**
- * "Vanilla view" text extraction for DocxEditor.
+ * Pure ProseMirror paragraph/text lookup helpers shared by the React and
+ * Vue adapters.
  *
- * Skips text inside `insertion` marks (tracked-change additions that
- * aren't accepted yet) so the agent's view of the document matches what
- * `add_comment` / `suggest_change` can anchor to. Tracked deletions stay
- * included — they're still in the doc until accepted.
+ * "Vanilla view" text extraction skips text inside `insertion` marks
+ * (tracked-change additions that aren't accepted yet) so the agent's view
+ * of the document matches what `addComment` / `proposeChange` can anchor
+ * to. Tracked deletions stay included — they're still in the doc until
+ * accepted.
+ *
+ * Previously duplicated at
+ * `packages/react/src/components/DocxEditor/internals/{pmAnchors,vanillaText}.ts`
+ * and `packages/vue/src/utils/paraTextHelpers.ts`. Both adapters now
+ * re-export from here.
  */
 
 import type { Node as PMNode } from 'prosemirror-model';
+
+/**
+ * PM position range for a paragraph identified by Word `w14:paraId`.
+ * Stable across edits — inverse of `formatContentForLLM`'s `[paraId]` line tag.
+ *
+ * Returns inclusive `from` (position before the textblock) and exclusive
+ * `to` (`from + nodeSize`). Text content lives in `[from + 1, to - 1]`.
+ */
+export function findParaIdRange(doc: PMNode, paraId: string): { from: number; to: number } | null {
+  if (!paraId || !paraId.trim()) return null;
+  let result: { from: number; to: number } | null = null;
+  doc.descendants((node, pos) => {
+    if (result !== null) return false;
+    if (node.isTextblock && node.attrs?.paraId === paraId) {
+      result = { from: pos, to: pos + node.nodeSize };
+      return false;
+    }
+    return true;
+  });
+  return result;
+}
 
 /** Text of a single PM node (typically a paragraph), vanilla view. */
 export function getVanillaNodeText(node: PMNode): string {

@@ -21,7 +21,10 @@ import {
   getSelectionRectsFromDom,
   getCaretPositionFromDom,
 } from '@eigenpal/docx-editor-core/layout-bridge/clickToPositionDom';
-import { findBodyPmAnchor } from '@eigenpal/docx-editor-core/layout-bridge';
+import {
+  findBodyPmAnchor,
+  applyCellSelectionHighlight,
+} from '@eigenpal/docx-editor-core/layout-bridge';
 import { findImageElement } from '@eigenpal/docx-editor-core/layout-painter';
 import type { ImageSelectionInfo } from '../components/imageSelectionTypes';
 import { Z_INDEX } from '../styles/zIndex';
@@ -146,6 +149,12 @@ export function useSelectionSync(opts: UseSelectionSyncOptions): UseSelectionSyn
 
     // Keep the image overlay glued to the live selection after every change.
     syncSelectedImageToSelection();
+
+    // Paint the multi-cell selection highlight on the body table cells. Runs
+    // before the image/text branches so it both lights up an active
+    // CellSelection and clears a stale highlight when the selection moves to
+    // text or an image. Mirrors React's `applyCellSelectionHighlight` call.
+    applyCellSelectionHighlight(container, view.state);
 
     // An image NodeSelection is painted by ImageSelectionOverlay, not here —
     // suppress the text caret / selection rects so they don't double up. Gate

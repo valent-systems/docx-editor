@@ -418,34 +418,15 @@ export function getSelectionRectsFromDom(
     // Check if span overlaps with selection
     if (pmEnd <= from || pmStart >= to) continue;
 
-    const textNode = spanEl.firstChild;
-    if (!textNode || textNode.nodeType !== Node.TEXT_NODE) continue;
-
-    const text = textNode as Text;
-    const ownerDoc = spanEl.ownerDocument;
-    if (!ownerDoc) continue;
-
-    // Calculate character range within this span
-    const startChar = Math.max(0, from - pmStart);
-    const endChar = Math.min(text.length, to - pmStart);
-
-    if (startChar >= endChar) continue;
-
-    // Create range for the selected text
-    const range = ownerDoc.createRange();
-    range.setStart(text, startChar);
-    range.setEnd(text, endChar);
-
-    // Get all client rects (handles line wraps)
-    const clientRects = range.getClientRects();
-
-    // Find page index
+    // Clip each rect to the enclosing split-table's visible window so selecting
+    // across a page-broken table doesn't scatter boxes into the inter-page gap
+    // (getClientRects reports geometry for lines hidden by the table's
+    // overflow:hidden).
     const pageEl = spanEl.closest('.layout-page') as HTMLElement | null;
     const pageIndex = pageEl ? Number(pageEl.dataset.pageNumber || 1) - 1 : 0;
-
-    for (const clientRect of Array.from(clientRects)) {
-      const clipped = clipRectToTableWindow(spanEl, clientRect);
-      if (!clipped) continue;
+    const pushClipped = (rect: { left: number; top: number; right: number; bottom: number }) => {
+      const clipped = clipRectToTableWindow(spanEl, rect);
+      if (!clipped) return;
       rects.push({
         x: clipped.left - overlayRect.left,
         y: clipped.top - overlayRect.top,
@@ -453,6 +434,43 @@ export function getSelectionRectsFromDom(
         height: clipped.bottom - clipped.top,
         pageIndex,
       });
+    };
+
+    // Tab runs render as fixed-width spans with no text node — use their box.
+    if (spanEl.classList.contains('layout-run-tab')) {
+      pushClipped(spanEl.getBoundingClientRect());
+      continue;
+    }
+
+    // Text node may be a direct child, or nested inside an <a> for hyperlinks.
+    let textNode: Text | null = null;
+    if (spanEl.firstChild?.nodeType === Node.TEXT_NODE) {
+      textNode = spanEl.firstChild as Text;
+    } else if (
+      spanEl.firstChild?.nodeType === Node.ELEMENT_NODE &&
+      (spanEl.firstChild as HTMLElement).tagName === 'A' &&
+      spanEl.firstChild.firstChild?.nodeType === Node.TEXT_NODE
+    ) {
+      textNode = spanEl.firstChild.firstChild as Text;
+    }
+    if (!textNode) continue;
+    const ownerDoc = spanEl.ownerDocument;
+    if (!ownerDoc) continue;
+
+    // Calculate character range within this span
+    const startChar = Math.max(0, from - pmStart);
+    const endChar = Math.min(textNode.length, to - pmStart);
+
+    if (startChar >= endChar) continue;
+
+    // Create range for the selected text
+    const range = ownerDoc.createRange();
+    range.setStart(textNode, startChar);
+    range.setEnd(textNode, endChar);
+
+    // Get all client rects (handles line wraps)
+    for (const clientRect of Array.from(range.getClientRects())) {
+      pushClipped(clientRect);
     }
   }
 

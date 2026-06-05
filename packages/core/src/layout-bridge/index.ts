@@ -66,6 +66,7 @@ export {
   getCaretPositionFromDom,
 } from './clickToPositionDom';
 export type { DomSelectionRect, DomCaretPosition } from './clickToPositionDom';
+export { applyCellSelectionHighlight } from './cellSelectionHighlight';
 
 // Selection rectangles
 export {

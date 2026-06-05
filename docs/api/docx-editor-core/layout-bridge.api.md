@@ -4,8 +4,14 @@
 
 ```ts
 
+import { EditorState } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { Node as Node_2 } from 'prosemirror-model';
+
+// @public
+export function applyCellSelectionHighlight(pagesContainer: HTMLElement, state: EditorState, options?: {
+    scope?: 'body' | 'header' | 'footer';
+}): void;
 
 // @public
 export function applyFootnotePresentation(blocks: FlowBlock[], displayNumber: number): FlowBlock[];

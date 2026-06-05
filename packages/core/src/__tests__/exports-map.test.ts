@@ -147,6 +147,14 @@ describe('package.json exports map', () => {
       './prosemirror/plugins/selectionTracker',
       './prosemirror/schema',
       './prosemirror/styles',
+      './prosemirror/paraText',
+      './prosemirror/queries',
+      './prosemirror/applyFormatting',
+      './prosemirror/tableResize',
+      './prosemirror/imageCommit',
+      './prosemirror/commentOps',
+      './prosemirror/commentIdAllocator',
+      './utils/autoScroll',
     ]);
     const unexpected = Object.keys(pkg.exports).filter((subpath) => !approved.has(subpath));
     expect(unexpected).toEqual([]);
