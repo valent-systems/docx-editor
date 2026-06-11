@@ -481,6 +481,19 @@ function renderInlineImageRun(run: ImageRun, doc: Document): HTMLElement {
   // baseline/top would land flush with the line edge.)
   img.style.verticalAlign = 'middle';
 
+  // Fit the image to its container's content width (the text column or table
+  // cell) while preserving the run's aspect ratio: cap the width at 100% of the
+  // container and let `aspect-ratio` drive the height. Without this, a wide
+  // image in a narrow cell squashes (the explicit height stays while the width
+  // is clamped) or overflows the page entirely. The run's own aspect is used —
+  // not the image's natural aspect — so a deliberately stretched image keeps
+  // its shape. Behaves identically in React and Vue (both use this painter).
+  if (run.width > 0 && run.height > 0) {
+    img.style.height = 'auto';
+    img.style.aspectRatio = `${run.width} / ${run.height}`;
+    img.style.maxWidth = '100%';
+  }
+
   applyInlineImageDist(img, run);
   applyPmPositions(img, run.pmStart, run.pmEnd);
 
