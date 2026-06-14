@@ -122,6 +122,7 @@ describe('package.json exports map', () => {
       './utils/findReplace',
       './utils/findVerticalScrollParent',
       './utils/fontOptions',
+      './utils/stylePreview',
       './utils/headingCollector',
       './utils/highlightColors',
       './utils/listState',

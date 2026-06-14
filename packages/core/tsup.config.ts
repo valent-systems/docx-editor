@@ -54,6 +54,7 @@ export default defineConfig([
       'utils/findReplace': 'src/utils/findReplace.ts',
       'utils/findVerticalScrollParent': 'src/utils/findVerticalScrollParent.ts',
       'utils/fontOptions': 'src/utils/fontOptions.ts',
+      'utils/stylePreview': 'src/utils/stylePreview.ts',
       'utils/listState': 'src/utils/listState.ts',
       'utils/reportIssue': 'src/utils/reportIssue.ts',
       'utils/sidebarConstants': 'src/utils/sidebarConstants.ts',

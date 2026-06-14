@@ -170,6 +170,8 @@ function applyRunStyles(
     if (activeCommentId != null) {
       element.style.backgroundColor = 'rgba(255, 212, 0, 0.15)';
       element.style.borderBottom = '1px solid rgba(255, 212, 0, 0.4)';
+      element.style.cursor = 'pointer';
+      element.style.transition = 'background-color 0.15s ease';
       element.dataset.commentId = String(activeCommentId);
     }
   }

@@ -173,6 +173,11 @@
       "import": "./dist/utils/comments.mjs",
       "require": "./dist/utils/comments.js"
     },
+    "./utils/stylePreview": {
+      "types": "./dist/utils/stylePreview.d.ts",
+      "import": "./dist/utils/stylePreview.mjs",
+      "require": "./dist/utils/stylePreview.js"
+    },
     "./utils/findReplace": {
       "types": "./dist/utils/findReplace.d.ts",
       "import": "./dist/utils/findReplace.mjs",
@@ -461,6 +466,9 @@
       ],
       "utils/comments": [
         "./dist/utils/comments.d.ts"
+      ],
+      "utils/stylePreview": [
+        "./dist/utils/stylePreview.d.ts"
       ],
       "utils/findReplace": [
         "./dist/utils/findReplace.d.ts"
