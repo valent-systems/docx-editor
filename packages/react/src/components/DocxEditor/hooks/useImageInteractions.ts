@@ -14,13 +14,13 @@
 
 import { useCallback } from 'react';
 
-import { pixelsToEmu } from '@eigenpal/docx-editor-core/utils';
+import { pixelsToEmu } from '@sqren/docx-editor-core/utils';
 import {
   isFloatingImage,
   commitImageResize,
   commitImageFloatMove,
   commitImageInlineMove,
-} from '@eigenpal/docx-editor-core/prosemirror/imageCommit';
+} from '@sqren/docx-editor-core/prosemirror/imageCommit';
 
 import type { HiddenProseMirrorRef } from '../HiddenProseMirror';
 

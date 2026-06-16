@@ -24,7 +24,7 @@ import {
   isSelectionWithin,
   injectSelectionStyles,
   areSelectionStylesInjected,
-} from '@eigenpal/docx-editor-core/utils';
+} from '@sqren/docx-editor-core/utils';
 
 // ============================================================================
 // TYPES

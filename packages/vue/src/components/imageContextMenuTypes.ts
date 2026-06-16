@@ -7,7 +7,7 @@
  * carry named type exports.
  */
 
-import type { WrapType } from '@eigenpal/docx-editor-core/docx/wrapTypes';
+import type { WrapType } from '@sqren/docx-editor-core/docx/wrapTypes';
 
 type ImageAttrsCssFloat = 'left' | 'right' | 'none' | null;
 

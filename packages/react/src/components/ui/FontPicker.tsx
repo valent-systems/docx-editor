@@ -23,8 +23,8 @@ import { getPrimaryFontFamily } from './fontPickerValue';
 // TYPES
 // ============================================================================
 
-export type { FontOption } from '@eigenpal/docx-editor-core/utils/fontOptions';
-import type { FontOption } from '@eigenpal/docx-editor-core/utils/fontOptions';
+export type { FontOption } from '@sqren/docx-editor-core/utils/fontOptions';
+import type { FontOption } from '@sqren/docx-editor-core/utils/fontOptions';
 
 export interface FontPickerProps {
   value?: string;

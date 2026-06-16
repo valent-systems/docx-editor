@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef } from 'react';
-import type { Document } from '@eigenpal/docx-editor-core/types/document';
-import type { Comment } from '@eigenpal/docx-editor-core/types/content';
-import { parseDocx } from '@eigenpal/docx-editor-core/docx';
-import { DocumentAgent } from '@eigenpal/docx-editor-core/agent';
-import { loadDocumentFonts, type DocxInput } from '@eigenpal/docx-editor-core/utils';
+import type { Document } from '@sqren/docx-editor-core/types/document';
+import type { Comment } from '@sqren/docx-editor-core/types/content';
+import { parseDocx } from '@sqren/docx-editor-core/docx';
+import { DocumentAgent } from '@sqren/docx-editor-core/agent';
+import { loadDocumentFonts, type DocxInput } from '@sqren/docx-editor-core/utils';
 import type { UseHistoryReturn } from '../../../hooks/useHistory';
 import type { PagedEditorRef } from '../PagedEditor';
 import type { CommentIdAllocator } from '../commentFactories';
-import { seedCommentAllocator } from '@eigenpal/docx-editor-core/prosemirror/commentIdAllocator';
+import { seedCommentAllocator } from '@sqren/docx-editor-core/prosemirror/commentIdAllocator';
 
 /**
  * Document lifecycle: load buffer / pre-parsed doc, keep the agent in

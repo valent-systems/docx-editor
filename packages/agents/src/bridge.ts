@@ -1,13 +1,13 @@
 /**
- * @eigenpal/docx-editor-agents/bridge
+ * @sqren/docx-editor-agents/bridge
  *
  * Editor bridge that connects agent tools to a live `DocxEditor` instance.
  * Framework-agnostic. The React adapter lives in
- * `@eigenpal/docx-editor-agents/react`.
+ * `@sqren/docx-editor-agents/react`.
  *
  * @example
  * ```ts
- * import { createEditorBridge } from '@eigenpal/docx-editor-agents/bridge';
+ * import { createEditorBridge } from '@sqren/docx-editor-agents/bridge';
  * const bridge = createEditorBridge(editorRef, 'Assistant');
  * bridge.addComment({ paragraphIndex: 3, text: 'Fix this.' });
  * ```
@@ -198,19 +198,17 @@ function getCommentText(content: unknown[]): string {
  */
 function getDocumentBody(
   editorRef: EditorRefLike
-): import('@eigenpal/docx-editor-core/headless').DocumentBody | null {
+): import('@sqren/docx-editor-core/headless').DocumentBody | null {
   // Prefer the live PM-based document (reflects user edits)
   const pagedRef = editorRef.getEditorRef();
   if (pagedRef) {
     const doc = pagedRef.getDocument() as
-      | import('@eigenpal/docx-editor-core/headless').Document
+      | import('@sqren/docx-editor-core/headless').Document
       | null;
     if (doc?.package?.document) return doc.package.document;
   }
   // Fallback to the initial document
-  const doc = editorRef.getDocument() as
-    | import('@eigenpal/docx-editor-core/headless').Document
-    | null;
+  const doc = editorRef.getDocument() as import('@sqren/docx-editor-core/headless').Document | null;
   return doc?.package?.document ?? null;
 }
 

@@ -12,17 +12,17 @@ import path from 'node:path';
 
 export const PACKAGES = [
   {
-    name: '@eigenpal/docx-editor-core',
+    name: '@sqren/docx-editor-core',
     root: 'packages/core',
     pkgSlug: 'docx-editor-core',
   },
   {
-    name: '@eigenpal/docx-editor-i18n',
+    name: '@sqren/docx-editor-i18n',
     root: 'packages/i18n',
     pkgSlug: 'docx-editor-i18n',
   },
   {
-    name: '@eigenpal/docx-editor-react',
+    name: '@sqren/docx-editor-react',
     root: 'packages/react',
     pkgSlug: 'docx-editor-react',
     // Strips dev-time `paths` so Extractor follows `@eigenpal/...` via
@@ -31,13 +31,13 @@ export const PACKAGES = [
     tsconfigPath: 'packages/react/tsconfig.api.json',
   },
   {
-    name: '@eigenpal/docx-editor-vue',
+    name: '@sqren/docx-editor-vue',
     root: 'packages/vue',
     pkgSlug: 'docx-editor-vue',
     tsconfigPath: 'packages/vue/tsconfig.api.json',
   },
   {
-    name: '@eigenpal/docx-editor-agents',
+    name: '@sqren/docx-editor-agents',
     root: 'packages/agents',
     pkgSlug: 'docx-editor-agents',
     // Excludes Vue source files because the Vue adapter for agents

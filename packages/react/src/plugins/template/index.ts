@@ -10,7 +10,7 @@
  *
  * @example
  * ```tsx
- * import { PluginHost, templatePlugin } from '@eigenpal/docx-editor-react/plugin-api';
+ * import { PluginHost, templatePlugin } from '@sqren/docx-editor-react/plugin-api';
  *
  * function MyEditor() {
  *   return (

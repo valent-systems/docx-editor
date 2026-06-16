@@ -34,45 +34,45 @@ export default defineConfig(async () => {
             // Resolve package imports to source for live development
             // Order matters: more-specific prefixes before less-specific ones
             {
-              find: '@eigenpal/docx-editor-react',
+              find: '@sqren/docx-editor-react',
               replacement: path.join(monorepoRoot, 'packages/react/src/index.ts'),
             },
             {
-              find: '@eigenpal/docx-editor-i18n',
+              find: '@sqren/docx-editor-i18n',
               replacement: path.join(monorepoRoot, 'packages/i18n/src/index.ts'),
             },
             {
-              find: '@eigenpal/docx-editor-agents/react',
+              find: '@sqren/docx-editor-agents/react',
               replacement: path.join(monorepoRoot, 'packages/agents/src/react.ts'),
             },
             {
-              find: '@eigenpal/docx-editor-agents/server',
+              find: '@sqren/docx-editor-agents/server',
               replacement: path.join(monorepoRoot, 'packages/agents/src/server.ts'),
             },
             {
-              find: /^@eigenpal\/docx-editor-agents$/,
+              find: /^@sqren\/docx-editor-agents$/,
               replacement: path.join(monorepoRoot, 'packages/agents/src/index.ts'),
             },
             {
-              find: '@eigenpal/docx-editor-core/headless',
+              find: '@sqren/docx-editor-core/headless',
               replacement: path.join(monorepoRoot, 'packages/core/src/headless.ts'),
             },
             {
-              find: '@eigenpal/docx-editor-core/core-plugins',
+              find: '@sqren/docx-editor-core/core-plugins',
               replacement: path.join(monorepoRoot, 'packages/core/src/core-plugins/index.ts'),
             },
             {
-              find: '@eigenpal/docx-editor-core/mcp',
+              find: '@sqren/docx-editor-core/mcp',
               replacement: path.join(monorepoRoot, 'packages/core/src/mcp/index.ts'),
             },
-            // Wildcard alias for deep core imports (e.g. @eigenpal/docx-editor-core/utils/docxInput)
+            // Wildcard alias for deep core imports (e.g. @sqren/docx-editor-core/utils/docxInput)
             {
-              find: /^@eigenpal\/docx-editor-core\/(.+)/,
+              find: /^@sqren\/docx-editor-core\/(.+)/,
               replacement: path.join(monorepoRoot, 'packages/core/src/$1'),
             },
-            // Exact match for bare @eigenpal/docx-editor-core (must come AFTER the prefix match above)
+            // Exact match for bare @sqren/docx-editor-core (must come AFTER the prefix match above)
             {
-              find: /^@eigenpal\/docx-editor-core$/,
+              find: /^@sqren\/docx-editor-core$/,
               replacement: path.join(monorepoRoot, 'packages/core/src/core.ts'),
             },
             { find: '@', replacement: path.join(monorepoRoot, 'packages/react/src') },

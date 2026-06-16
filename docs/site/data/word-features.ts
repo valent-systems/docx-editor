@@ -123,8 +123,7 @@ export const wordFeatures: WordFeature[] = [
     rendering: 'full',
     roundTrip: 'full',
     tier: 'community',
-    notes:
-      'Bidi layout with mirrored alignment; Hebrew locale ships in @eigenpal/docx-editor-i18n.',
+    notes: 'Bidi layout with mirrored alignment; Hebrew locale ships in @sqren/docx-editor-i18n.',
   },
 
   // --- Paragraphs & styles ---------------------------------------------
@@ -617,7 +616,7 @@ export const wordFeatures: WordFeature[] = [
     rendering: 'full',
     roundTrip: 'full',
     tier: 'community',
-    notes: 'en, de, fr, he, hi, pl, pt-BR, tr, zh-CN via @eigenpal/docx-editor-i18n.',
+    notes: 'en, de, fr, he, hi, pl, pt-BR, tr, zh-CN via @sqren/docx-editor-i18n.',
     docsLink: '/docs/1.x/i18n',
   },
   {

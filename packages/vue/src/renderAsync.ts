@@ -4,9 +4,9 @@
 
 import { createApp, h, type App } from 'vue';
 import DocxEditor from './components/DocxEditor.vue';
-import type { EditorHandle } from '@eigenpal/docx-editor-core';
-import type { Document } from '@eigenpal/docx-editor-core/types/document';
-import { toArrayBuffer, type DocxInput } from '@eigenpal/docx-editor-core/utils';
+import type { EditorHandle } from '@sqren/docx-editor-core';
+import type { Document } from '@sqren/docx-editor-core/types/document';
+import { toArrayBuffer, type DocxInput } from '@sqren/docx-editor-core/utils';
 import type { DocxEditorProps, DocxEditorRef, EditorMode } from './components/DocxEditor/types';
 
 /** Options for `renderAsync`. */

@@ -19,52 +19,49 @@ import { EditorState, type Transaction, type Plugin } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 
 // Core imports — these all resolve through Vite aliases to packages/core/src/
-import { parseDocx } from '@eigenpal/docx-editor-core/docx/parser';
+import { parseDocx } from '@sqren/docx-editor-core/docx/parser';
 import {
   toProseDoc,
   createEmptyDoc,
   headerFooterToProseDoc,
   proseDocToBlocks,
-} from '@eigenpal/docx-editor-core/prosemirror/conversion';
-import { fromProseDoc } from '@eigenpal/docx-editor-core/prosemirror/conversion/fromProseDoc';
-import { schema, ensureParaIdsInState } from '@eigenpal/docx-editor-core/prosemirror';
-import { singletonManager } from '@eigenpal/docx-editor-core/prosemirror/schema';
+} from '@sqren/docx-editor-core/prosemirror/conversion';
+import { fromProseDoc } from '@sqren/docx-editor-core/prosemirror/conversion/fromProseDoc';
+import { schema, ensureParaIdsInState } from '@sqren/docx-editor-core/prosemirror';
+import { singletonManager } from '@sqren/docx-editor-core/prosemirror/schema';
 import {
   createSuggestionModePlugin,
   setSuggestionMode,
   createDocumentStylesPlugin,
-} from '@eigenpal/docx-editor-core/prosemirror/plugins';
-import {
-  ExtensionManager,
-  createStarterKit,
-} from '@eigenpal/docx-editor-core/prosemirror/extensions';
-import type { CommandMap } from '@eigenpal/docx-editor-core/prosemirror/extensions/types';
+} from '@sqren/docx-editor-core/prosemirror/plugins';
+import { ExtensionManager, createStarterKit } from '@sqren/docx-editor-core/prosemirror/extensions';
+import type { CommandMap } from '@sqren/docx-editor-core/prosemirror/extensions/types';
 import {
   measureBlocksWithFloats,
   measureParagraph,
-} from '@eigenpal/docx-editor-core/layout-bridge/measuring';
+} from '@sqren/docx-editor-core/layout-bridge/measuring';
 import type {
   FloatingImageZone,
   FloatPageGeometry,
-} from '@eigenpal/docx-editor-core/layout-bridge/measuring';
+} from '@sqren/docx-editor-core/layout-bridge/measuring';
 import {
   measureTableBlock,
   getPageSize,
   getMargins,
   getColumns,
   resolveHeaderFooter,
-} from '@eigenpal/docx-editor-core/layout-bridge';
+} from '@sqren/docx-editor-core/layout-bridge';
 import {
   computeLayout,
   createLayoutScheduler,
   stripScrollFlag,
-} from '@eigenpal/docx-editor-core/editor';
+} from '@sqren/docx-editor-core/editor';
 import {
   DEFAULT_TEXTBOX_MARGINS,
   DEFAULT_TEXTBOX_WIDTH,
   assertExhaustiveFlowBlock,
-} from '@eigenpal/docx-editor-core/layout-engine';
-import { renderPages } from '@eigenpal/docx-editor-core/layout-painter/renderPage';
+} from '@sqren/docx-editor-core/layout-engine';
+import { renderPages } from '@sqren/docx-editor-core/layout-painter/renderPage';
 import type {
   FlowBlock,
   Layout,
@@ -73,18 +70,18 @@ import type {
   TableBlock,
   ImageBlock,
   TextBoxBlock,
-} from '@eigenpal/docx-editor-core/layout-engine/types';
+} from '@sqren/docx-editor-core/layout-engine/types';
 import {
   buildBlockLookup,
   enclosingSdtGroupIds,
   applySdtFocus,
-} from '@eigenpal/docx-editor-core/layout-painter';
-import type { Document } from '@eigenpal/docx-editor-core/types/document';
-import type { LayoutSelectionGate } from '@eigenpal/docx-editor-core/prosemirror';
+} from '@sqren/docx-editor-core/layout-painter';
+import type { Document } from '@sqren/docx-editor-core/types/document';
+import type { LayoutSelectionGate } from '@sqren/docx-editor-core/prosemirror';
 
 // ProseMirror CSS — must be imported for the hidden editor to work
 import 'prosemirror-view/style/prosemirror.css';
-import '@eigenpal/docx-editor-core/prosemirror/editor.css';
+import '@sqren/docx-editor-core/prosemirror/editor.css';
 // Adapter-level editor styles (cursor, selection, comment highlights,
 // table cell layout, page chrome, hover states). Mirror of React's
 // packages/react/src/styles/editor.css minus the @tailwind utilities
@@ -102,7 +99,7 @@ const DEFAULT_PAGE_GAP = 24;
 // ============================================================================
 
 // `getPageSize`, `getMargins`, `resolveHeaderFooter` live in
-// `@eigenpal/docx-editor-core/layout-bridge` so React and Vue agree on
+// `@sqren/docx-editor-core/layout-bridge` so React and Vue agree on
 // twips→px math + HF lookup. Imported at the top of this file.
 
 /**
@@ -112,7 +109,7 @@ const DEFAULT_PAGE_GAP = 24;
  * via `measureBlocksWithFloats` in core so anchored images, floating
  * textboxes, and floating tables wrap text consistently across adapters.
  *
- * `measureTableBlock` lives in `@eigenpal/docx-editor-core/layout-bridge`
+ * `measureTableBlock` lives in `@sqren/docx-editor-core/layout-bridge`
  * so React and Vue stay in lockstep on table-cell measurement.
  */
 function measureBlock(
@@ -243,7 +240,7 @@ export interface UseDocxEditorReturn {
    * the HF's `rId` (cold boot, or just-removed slot).
    */
   getHfPmView: (
-    hf: import('@eigenpal/docx-editor-core/types/document').HeaderFooter
+    hf: import('@sqren/docx-editor-core/types/document').HeaderFooter
   ) => EditorView | null;
   /**
    * Re-mount / tear down HF EditorViews to match the current document's
@@ -594,7 +591,7 @@ export function useDocxEditor(options: UseDocxEditorOptions): UseDocxEditorRetur
    * (e.g. just removed).
    */
   function findHfRid(
-    hf: import('@eigenpal/docx-editor-core/types/document').HeaderFooter
+    hf: import('@sqren/docx-editor-core/types/document').HeaderFooter
   ): string | null {
     const pkg = document.value?.package;
     if (!pkg) return null;
@@ -613,7 +610,7 @@ export function useDocxEditor(options: UseDocxEditorOptions): UseDocxEditorRetur
    * mounted (cold boot, or the HF was just materialised at runtime).
    */
   function getHfPmView(
-    hf: import('@eigenpal/docx-editor-core/types/document').HeaderFooter
+    hf: import('@sqren/docx-editor-core/types/document').HeaderFooter
   ): EditorView | null {
     const rId = findHfRid(hf);
     if (!rId) return null;
@@ -785,9 +782,9 @@ export function useDocxEditor(options: UseDocxEditorOptions): UseDocxEditorRetur
   async function save(): Promise<Blob | null> {
     if (!editorView.value || !document.value) return null;
 
-    const { repackDocx, createDocx } = await import('@eigenpal/docx-editor-core/docx/rezip');
+    const { repackDocx, createDocx } = await import('@sqren/docx-editor-core/docx/rezip');
     const { injectReplyRangeMarkers, injectTCReplyRangeMarkers } =
-      await import('@eigenpal/docx-editor-core/docx');
+      await import('@sqren/docx-editor-core/docx');
 
     const updatedDoc = fromProseDoc(editorView.value.state.doc, document.value);
     // Word/Pages need parallel `commentRangeStart`/`End` markers for

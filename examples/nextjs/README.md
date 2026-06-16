@@ -1,6 +1,6 @@
 # Next.js example
 
-`@eigenpal/docx-editor-react` in the Next.js App Router. The editor reads
+`@sqren/docx-editor-react` in the Next.js App Router. The editor reads
 the DOM and measures layout in the browser, so it cannot run during server
 rendering. The fix is one `dynamic()` import with `ssr: false`.
 
@@ -52,7 +52,7 @@ access during prerender.
 ## Use it in your own Next.js app
 
 ```bash
-npm install @eigenpal/docx-editor-react @eigenpal/docx-editor-core
+npm install @sqren/docx-editor-react @sqren/docx-editor-core
 ```
 
 Always import `DocxEditor` through `dynamic(..., { ssr: false })`, or wrap it

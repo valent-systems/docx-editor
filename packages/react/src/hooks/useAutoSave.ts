@@ -13,9 +13,9 @@ import {
   getAutoSaveStorageSize,
   formatStorageSize,
   isAutoSaveSupported,
-} from '@eigenpal/docx-editor-core';
-import type { AutoSaveStatus, SavedDocumentData } from '@eigenpal/docx-editor-core';
-import type { Document } from '@eigenpal/docx-editor-core/types/document';
+} from '@sqren/docx-editor-core';
+import type { AutoSaveStatus, SavedDocumentData } from '@sqren/docx-editor-core';
+import type { Document } from '@sqren/docx-editor-core/types/document';
 
 // ============================================================================
 // RE-EXPORT TYPES AND UTILITIES (backwards compat)

@@ -15,7 +15,7 @@ export default defineConfig({
   resolve: {
     alias: {
       ...(isMonorepo
-        ? { '@eigenpal/docx-editor-react': path.join(monorepoRoot, 'packages/react/src/index.ts') }
+        ? { '@sqren/docx-editor-react': path.join(monorepoRoot, 'packages/react/src/index.ts') }
         : {}),
       '@': path.join(monorepoRoot, 'packages/react/src'),
     },

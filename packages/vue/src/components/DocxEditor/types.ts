@@ -10,17 +10,17 @@
 
 import type { Plugin } from 'prosemirror-state';
 import type { EditorView } from 'prosemirror-view';
-import type { Document, Theme } from '@eigenpal/docx-editor-core/types/document';
-import type { Comment } from '@eigenpal/docx-editor-core/types/content';
-import type { SelectionState } from '@eigenpal/docx-editor-core/prosemirror';
-import type { DocxInput } from '@eigenpal/docx-editor-core/utils';
-import type { FontOption } from '@eigenpal/docx-editor-core/utils/fontOptions';
-import type { FontDefinition } from '@eigenpal/docx-editor-core/utils';
+import type { Document, Theme } from '@sqren/docx-editor-core/types/document';
+import type { Comment } from '@sqren/docx-editor-core/types/content';
+import type { SelectionState } from '@sqren/docx-editor-core/prosemirror';
+import type { DocxInput } from '@sqren/docx-editor-core/utils';
+import type { FontOption } from '@sqren/docx-editor-core/utils/fontOptions';
+import type { FontDefinition } from '@sqren/docx-editor-core/utils';
 import type { StyleValue, VNodeChild } from 'vue';
-import type { EditorRefLike } from '@eigenpal/docx-editor-agents/bridge';
-import type { PMContentControl } from '@eigenpal/docx-editor-core/prosemirror';
-import type { ContentControlFilter, ContentControlValue } from '@eigenpal/docx-editor-core/agent';
-import type { Translations } from '@eigenpal/docx-editor-i18n';
+import type { EditorRefLike } from '@sqren/docx-editor-agents/bridge';
+import type { PMContentControl } from '@sqren/docx-editor-core/prosemirror';
+import type { ContentControlFilter, ContentControlValue } from '@sqren/docx-editor-core/agent';
+import type { Translations } from '@sqren/docx-editor-i18n';
 
 export type EditorMode = 'editing' | 'suggesting' | 'viewing';
 

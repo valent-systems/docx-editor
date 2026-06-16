@@ -124,16 +124,16 @@ Stable dataset attrs on painted DOM (CSS, queries, selection map depend on these
 
 Shared React/Vue orchestration lives in core (issue #696, Tier 1) — adapters re-export or delegate, so grepping an adapter lands on a thin wrapper:
 
-| Shared op                           | Core module (in `@eigenpal/docx-editor-core`) |
-| ----------------------------------- | --------------------------------------------- |
-| paraId/text helpers                 | `prosemirror/paraText.ts`                     |
-| ref-API queries (find/selInfo/page) | `prosemirror/queries.ts`                      |
-| agent applyFormatting/setParaStyle  | `prosemirror/applyFormatting.ts`              |
-| comment/proposeChange + ID alloc    | `prosemirror/commentOps.ts`                   |
-| table-resize read/commit + twips    | `prosemirror/tableResize.ts`                  |
-| image resize/drag PM commits        | `prosemirror/imageCommit.ts`                  |
-| cell-selection highlight            | `layout-bridge/cellSelectionHighlight.ts`     |
-| drag auto-scroll delta math         | `utils/autoScroll.ts`                         |
+| Shared op                           | Core module (in `@sqren/docx-editor-core`) |
+| ----------------------------------- | ------------------------------------------ |
+| paraId/text helpers                 | `prosemirror/paraText.ts`                  |
+| ref-API queries (find/selInfo/page) | `prosemirror/queries.ts`                   |
+| agent applyFormatting/setParaStyle  | `prosemirror/applyFormatting.ts`           |
+| comment/proposeChange + ID alloc    | `prosemirror/commentOps.ts`                |
+| table-resize read/commit + twips    | `prosemirror/tableResize.ts`               |
+| image resize/drag PM commits        | `prosemirror/imageCommit.ts`               |
+| cell-selection highlight            | `layout-bridge/cellSelectionHighlight.ts`  |
+| drag auto-scroll delta math         | `utils/autoScroll.ts`                      |
 
 ### Extensions
 
@@ -202,7 +202,7 @@ Adding adapter prop/ref method:
 
 Every code PR → `bun changeset` → commit `.changeset/*.md`. Skip only for test/docs/CI-only PRs.
 
-- Use full npm name in frontmatter (`@eigenpal/docx-editor-react`). Always run `bun changeset`, don't hand-write. Wrong name crashes post-merge Release workflow.
+- Use full npm name in frontmatter (`@sqren/docx-editor-react`). Always run `bun changeset`, don't hand-write. Wrong name crashes post-merge Release workflow.
 - All published packages in fixed group — declare one bump, others follow.
 - Default bump: `patch`. `minor` for additive public API. `major` for breaks.
 - Summary lands verbatim in CHANGELOG; write for the consumer. Keep it concise (one or two lines), lead with the user-visible change (what changed, not how), and put `Fixes #N` at the end if relevant. No emojis or marketing.
@@ -211,7 +211,7 @@ Release: merge the bot's `chore: release` PR. Publish runs via OIDC, tags, GH re
 
 Branches: `main` = 1.x line. `0.x` = pre-rename maintenance, patch/minor only.
 
-Packages: `@eigenpal/docx-editor-{react,core,agents,i18n,vue}`, `@eigenpal/nuxt-docx-editor`. All published.
+Packages: `@sqren/docx-editor-{react,core,agents,i18n,vue}`, `@sqren/nuxt-docx-editor`. All published.
 
 ### Don't
 

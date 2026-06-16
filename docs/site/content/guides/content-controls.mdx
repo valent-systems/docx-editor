@@ -22,7 +22,7 @@ import {
   parseDocx,
   findContentControls,
   findContentControl,
-} from "@eigenpal/docx-editor-core/headless";
+} from "@sqren/docx-editor-core/headless";
 
 const doc = await parseDocx(buffer);
 
@@ -40,7 +40,7 @@ When `showingPlaceholder` is `true`, `text` is the placeholder boilerplate ("Cli
 `setContentControlContent` fills a `richText` or `plainText` control with a string (or `BlockContent[]` headless):
 
 ```ts
-import { setContentControlContent, removeContentControl } from "@eigenpal/docx-editor-core/headless";
+import { setContentControlContent, removeContentControl } from "@sqren/docx-editor-core/headless";
 
 let next = setContentControlContent(doc, { tag: "intro" }, "Filled by template");
 
@@ -63,7 +63,7 @@ Safety rules (each overridable with `{ force: true }`):
 `setContentControlValue` updates both the visible content and the structured `w:sdtPr` state:
 
 ```ts
-import { setContentControlValue } from "@eigenpal/docx-editor-core/headless";
+import { setContentControlValue } from "@sqren/docx-editor-core/headless";
 
 setContentControlValue(doc, { tag: "status" }, { kind: "dropdown", value: "2" });
 setContentControlValue(doc, { tag: "agree" }, { kind: "checkbox", checked: true });
@@ -79,7 +79,7 @@ In the editor, typed controls also get an interactive trigger at the top-right o
 Repeating-section controls (`w15:repeatingSection`) round-trip verbatim, and two helpers manage their items:
 
 ```ts
-import { addRepeatingSectionItem, removeRepeatingSectionItem } from "@eigenpal/docx-editor-core/headless";
+import { addRepeatingSectionItem, removeRepeatingSectionItem } from "@sqren/docx-editor-core/headless";
 
 // Clone an item (with fresh ids); afterIndex picks the insertion point.
 let next = addRepeatingSectionItem(doc, { tag: "lineItems" }, { afterIndex: 0 });
@@ -118,7 +118,7 @@ import {
   setContentControlValue,
   removeContentControl,
   repackDocx,
-} from "@eigenpal/docx-editor-core/headless";
+} from "@sqren/docx-editor-core/headless";
 
 const buffer = await readFile("contract-template.docx");
 let doc = await parseDocx(buffer);

@@ -43,8 +43,8 @@ import {
 /**
  * Create the suggestion-mode ProseMirror plugin. **Must be mounted on
  * the editor view for `setSuggestionMode` and `toggleSuggestionMode`
- * to do anything** — both adapters (`@eigenpal/docx-editor-react`,
- * `@eigenpal/docx-editor-vue`) auto-mount this inside the `DocxEditor`
+ * to do anything** — both adapters (`@sqren/docx-editor-react`,
+ * `@sqren/docx-editor-vue`) auto-mount this inside the `DocxEditor`
  * component, so consumers using the bundled components don't need to
  * register it themselves.
  *
@@ -59,7 +59,7 @@ import {
  *
  * @example
  * ```ts
- * import { createSuggestionModePlugin } from '@eigenpal/docx-editor-core/prosemirror/plugins';
+ * import { createSuggestionModePlugin } from '@sqren/docx-editor-core/prosemirror/plugins';
  *
  * const plugin = createSuggestionModePlugin(false, 'Jane');
  * EditorState.create({ doc, plugins: [plugin, ...other] });

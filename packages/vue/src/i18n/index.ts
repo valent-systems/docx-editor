@@ -1,12 +1,12 @@
 /**
  * Vue bindings for the shared i18n surface. ICU formatting, deep-merge,
- * and locale data live in `@eigenpal/docx-editor-i18n`; this module wraps
+ * and locale data live in `@sqren/docx-editor-i18n`; this module wraps
  * them in `provide`/`inject` + a reactive `useTranslation()` composable.
  */
 
 import { computed, inject, provide, unref, type InjectionKey, type App, type MaybeRef } from 'vue';
-import { createT, deepMerge, en } from '@eigenpal/docx-editor-i18n';
-import type { LocaleStrings, TFunction, Translations } from '@eigenpal/docx-editor-i18n';
+import { createT, deepMerge, en } from '@sqren/docx-editor-i18n';
+import type { LocaleStrings, TFunction, Translations } from '@sqren/docx-editor-i18n';
 
 type AnyRecord = Record<string, unknown>;
 

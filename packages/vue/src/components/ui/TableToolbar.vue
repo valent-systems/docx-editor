@@ -39,8 +39,8 @@ import TableBorderPicker, { type TableBorderPreset } from './TableBorderPicker.v
 import TableBorderColorPicker from './TableBorderColorPicker.vue';
 import TableBorderWidthPicker from './TableBorderWidthPicker.vue';
 import TableMoreDropdown, { type TableAction } from './TableMoreDropdown.vue';
-import { getTableContext } from '@eigenpal/docx-editor-core/prosemirror/extensions/nodes/TableExtension';
-import type { Theme } from '@eigenpal/docx-editor-core/types/document';
+import { getTableContext } from '@sqren/docx-editor-core/prosemirror/extensions/nodes/TableExtension';
+import type { Theme } from '@sqren/docx-editor-core/types/document';
 
 const props = defineProps<{
   view: EditorView | null;

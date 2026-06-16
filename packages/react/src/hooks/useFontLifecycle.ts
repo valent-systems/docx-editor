@@ -4,7 +4,7 @@ import {
   onFontError,
   loadFontDefinitions,
   type FontDefinition,
-} from '@eigenpal/docx-editor-core/utils';
+} from '@sqren/docx-editor-core/utils';
 
 /**
  * Owns the editor's three font lifecycle wires:

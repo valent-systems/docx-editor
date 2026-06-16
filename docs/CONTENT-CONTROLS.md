@@ -13,7 +13,7 @@ are preserved verbatim). This guide covers the APIs for finding and editing them
 ## Headless (server-side / AI pipelines)
 
 Operate directly on a parsed `Document` with no editor or DOM. Import from
-`@eigenpal/docx-editor-core/headless` (or `/agent`).
+`@sqren/docx-editor-core/headless` (or `/agent`).
 
 ```ts
 import {
@@ -25,7 +25,7 @@ import {
   fillContentControl,
   removeContentControl,
   serializeDocx, // or createDocx for bytes
-} from '@eigenpal/docx-editor-core/headless';
+} from '@sqren/docx-editor-core/headless';
 
 const doc = await parseDocx(buffer);
 
@@ -163,7 +163,7 @@ this flag before treating `text` as real data.
   `rawPropertiesXml`, so the serializer synthesizes a sequence-valid `w:sdtPr`
   from its `tag`/`id`/`sdtType` — it round-trips through `.docx` and Word.
 - **Cell-level controls are inline.** A control inside a table cell is planted
-  as an *inline* `w:sdt` within the cell's paragraph (a cell holds paragraphs;
+  as an _inline_ `w:sdt` within the cell's paragraph (a cell holds paragraphs;
   paragraphs hold inline content). The model does **not** add a block `w:sdt`
   directly under `w:tc` — `TableCell.content` is unchanged.
 - Typed-control value setters, live `dataBinding`, and `repeatingSection`

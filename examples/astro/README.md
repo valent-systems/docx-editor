@@ -1,6 +1,6 @@
 # Astro example
 
-`@eigenpal/docx-editor-react` as an Astro island. Astro ships zero JS by
+`@sqren/docx-editor-react` as an Astro island. Astro ships zero JS by
 default. The editor is interactive and browser-only, so it loads with the
 `client:only` directive, which skips SSR for that component entirely.
 
@@ -43,7 +43,7 @@ browser only. The page shell, fonts, and styles are still static HTML.
 ## Use it in your own Astro app
 
 ```bash
-npm install @eigenpal/docx-editor-react @eigenpal/docx-editor-core
+npm install @sqren/docx-editor-react @sqren/docx-editor-core
 npx astro add react
 ```
 

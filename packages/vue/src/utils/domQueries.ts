@@ -10,8 +10,8 @@
  */
 
 import type { EditorView } from 'prosemirror-view';
-import { findBodyPmSpans, clickToPositionDom } from '@eigenpal/docx-editor-core/layout-bridge';
-import { findWordBoundaries } from '@eigenpal/docx-editor-core/utils';
+import { findBodyPmSpans, clickToPositionDom } from '@sqren/docx-editor-core/layout-bridge';
+import { findWordBoundaries } from '@sqren/docx-editor-core/utils';
 
 /**
  * Resolve the painted header/footer instance nearest the viewport center — the

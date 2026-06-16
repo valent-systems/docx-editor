@@ -18,8 +18,8 @@
     "declarationMap": true,
     "baseUrl": ".",
     "paths": {
-      "@eigenpal/docx-editor-core": ["../core/src/core.ts"],
-      "@eigenpal/docx-editor-core/headless": ["../core/src/headless.ts"]
+      "@sqren/docx-editor-core": ["../core/src/core.ts"],
+      "@sqren/docx-editor-core/headless": ["../core/src/headless.ts"]
     }
   },
   "include": ["src", "vite.config.ts"],

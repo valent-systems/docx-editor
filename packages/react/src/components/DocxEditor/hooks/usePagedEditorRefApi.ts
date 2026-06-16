@@ -16,13 +16,13 @@ import { useEffect, useImperativeHandle } from 'react';
 import type { EditorState, Transaction } from 'prosemirror-state';
 import type { EditorView } from 'prosemirror-view';
 
-import type { Layout } from '@eigenpal/docx-editor-core/layout-engine';
-import type { Document, HeaderFooter } from '@eigenpal/docx-editor-core/types/document';
+import type { Layout } from '@sqren/docx-editor-core/layout-engine';
+import type { Document, HeaderFooter } from '@sqren/docx-editor-core/types/document';
 import {
   findCommentRange,
   findChangeRange,
   clampRangeToDoc,
-} from '@eigenpal/docx-editor-core/prosemirror/queries';
+} from '@sqren/docx-editor-core/prosemirror/queries';
 
 import type { HiddenProseMirrorRef } from '../HiddenProseMirror';
 import type { HiddenHeaderFooterPMsRef } from '../HiddenHeaderFooterPMs';

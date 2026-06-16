@@ -1,4 +1,4 @@
-# @eigenpal/docx-editor-i18n
+# @sqren/docx-editor-i18n
 
 ## 1.6.0
 
@@ -37,16 +37,16 @@
 
 ### Patch Changes
 
-- fe4cb94: Add per-locale subpath imports to `@eigenpal/docx-editor-i18n` so dynamic
+- fe4cb94: Add per-locale subpath imports to `@sqren/docx-editor-i18n` so dynamic
   locale loading can code-split a single locale instead of bundling the whole
   set:
 
   ```ts
   // Static — bundler ships only this locale's strings
-  import pl from '@eigenpal/docx-editor-i18n/pl';
+  import pl from '@sqren/docx-editor-i18n/pl';
 
   // Dynamic — splits into its own chunk, loaded on demand
-  const pl = (await import('@eigenpal/docx-editor-i18n/pl')).default;
+  const pl = (await import('@sqren/docx-editor-i18n/pl')).default;
   ```
 
   Subpaths ship for every locale: `/en`, `/de`, `/he`, `/pl`, `/pt-BR`, `/tr`,
@@ -54,15 +54,15 @@
   ergonomic path for static lists, the subpath for runtime locale switching.
 
   Also re-export `createEmptyDocument`, `createDocumentWithText`, and
-  `CreateEmptyDocumentOptions` from `@eigenpal/docx-editor-react` and
-  `@eigenpal/docx-editor-vue` so the common "spawn a blank editor"
+  `CreateEmptyDocumentOptions` from `@sqren/docx-editor-react` and
+  `@sqren/docx-editor-vue` so the common "spawn a blank editor"
   affordance no longer requires installing `-core` alongside the adapter.
 
   Surface `Comment`, `CommentRangeStart`, `CommentRangeEnd`,
   `TrackedChangeInfo`, `TrackedRunChange`, `Insertion`, `Deletion`,
   `MoveFrom`, `MoveTo`, and `ParagraphContent` from the main
-  `@eigenpal/docx-editor-core` entry. They were already public via
-  `@eigenpal/docx-editor-core/headless`; the main entry just hadn't been
+  `@sqren/docx-editor-core` entry. They were already public via
+  `@sqren/docx-editor-core/headless`; the main entry just hadn't been
   re-exporting them.
 
 ## 1.0.0
@@ -75,25 +75,25 @@
 
   ## Package restructure (breaking)
 
-  | Old import                                 | New import                                |
-  | ------------------------------------------ | ----------------------------------------- |
-  | `@eigenpal/docx-js-editor`                 | `@eigenpal/docx-editor-react`             |
-  | `@eigenpal/docx-js-editor/react`           | `@eigenpal/docx-editor-react`             |
-  | `@eigenpal/docx-editor-react/core`         | `@eigenpal/docx-editor-core`              |
-  | `@eigenpal/docx-editor-react/headless`     | `@eigenpal/docx-editor-core/headless`     |
-  | `@eigenpal/docx-editor-react/core-plugins` | `@eigenpal/docx-editor-core/core-plugins` |
-  | `@eigenpal/docx-editor-react/mcp`          | `@eigenpal/docx-editor-agents/mcp`        |
-  | `@eigenpal/docx-editor-react/i18n/*.json`  | `@eigenpal/docx-editor-i18n/*.json`       |
+  | Old import                              | New import                             |
+  | --------------------------------------- | -------------------------------------- |
+  | `@eigenpal/docx-js-editor`              | `@sqren/docx-editor-react`             |
+  | `@eigenpal/docx-js-editor/react`        | `@sqren/docx-editor-react`             |
+  | `@sqren/docx-editor-react/core`         | `@sqren/docx-editor-core`              |
+  | `@sqren/docx-editor-react/headless`     | `@sqren/docx-editor-core/headless`     |
+  | `@sqren/docx-editor-react/core-plugins` | `@sqren/docx-editor-core/core-plugins` |
+  | `@sqren/docx-editor-react/mcp`          | `@sqren/docx-editor-agents/mcp`        |
+  | `@sqren/docx-editor-react/i18n/*.json`  | `@sqren/docx-editor-i18n/*.json`       |
 
   The old `@eigenpal/docx-js-editor` package stays on 0.x for legacy maintenance — no 1.x compatibility shim ships. Framework-agnostic utilities (e.g. `createEmptyDocument`) move to core:
 
   ```diff
   - import { DocxEditor, createEmptyDocument } from '@eigenpal/docx-js-editor';
-  + import { DocxEditor } from '@eigenpal/docx-editor-react';
-  + import { createEmptyDocument } from '@eigenpal/docx-editor-core';
+  + import { DocxEditor } from '@sqren/docx-editor-react';
+  + import { createEmptyDocument } from '@sqren/docx-editor-core';
   ```
 
-  ## Vue 3 adapter (`@eigenpal/docx-editor-vue`)
+  ## Vue 3 adapter (`@sqren/docx-editor-vue`)
 
   The Vue package becomes a real adapter (previously a stub). Public API mirrors React:
   - `<DocxEditor>` with matching prop surface
@@ -102,28 +102,28 @@
 
   Parity gates cover insert-table, find/replace, page-setup, context menus, image overlay (resize/move/rotate/aspect-locked corners, dimension tooltip), advanced cell/row options (margins, height rule, text direction, no-wrap), menu-bar icons + shortcuts + carets, toolbar pickers, and the agent UI surface.
 
-  ## Shared i18n package (`@eigenpal/docx-editor-i18n`)
+  ## Shared i18n package (`@sqren/docx-editor-i18n`)
 
-  Locale strings move out of `@eigenpal/docx-editor-react` into a dedicated package consumed by both adapters from a single source.
+  Locale strings move out of `@sqren/docx-editor-react` into a dedicated package consumed by both adapters from a single source.
 
   ```diff
-  - import de from '@eigenpal/docx-editor-react/i18n/de.json';
-  + import de from '@eigenpal/docx-editor-i18n/de.json';
+  - import de from '@sqren/docx-editor-react/i18n/de.json';
+  + import de from '@sqren/docx-editor-i18n/de.json';
   ```
 
   The `defaultLocale` value (English) is still re-exported from the adapter packages, unchanged.
 
   ## Agent UI relocation (breaking)
 
-  `AgentPanel`, `AgentChatLog`, `AgentComposer`, `AgentSuggestionChip`, `AgentTimeline` no longer ship from `@eigenpal/docx-editor-react`. They live at:
-  - `@eigenpal/docx-editor-agents/react` — React components + `useAgentChat`
-  - `@eigenpal/docx-editor-agents/vue` — Vue 3 twins, plus `AIContextMenu` and `AIResponsePreview`
-  - `@eigenpal/docx-editor-agents/ai-sdk/react` / `/ai-sdk/vue` — `@ai-sdk/*` adapters
-  - `@eigenpal/docx-editor-agents/bridge` — React-free `createEditorBridge`, `agentTools`, `executeToolCall`, `getToolSchemas`, `createReviewerBridge`. Safe for headless / Vue / Node.
+  `AgentPanel`, `AgentChatLog`, `AgentComposer`, `AgentSuggestionChip`, `AgentTimeline` no longer ship from `@sqren/docx-editor-react`. They live at:
+  - `@sqren/docx-editor-agents/react` — React components + `useAgentChat`
+  - `@sqren/docx-editor-agents/vue` — Vue 3 twins, plus `AIContextMenu` and `AIResponsePreview`
+  - `@sqren/docx-editor-agents/ai-sdk/react` / `/ai-sdk/vue` — `@ai-sdk/*` adapters
+  - `@sqren/docx-editor-agents/bridge` — React-free `createEditorBridge`, `agentTools`, `executeToolCall`, `getToolSchemas`, `createReviewerBridge`. Safe for headless / Vue / Node.
 
   ```diff
-  - import { AgentPanel, AgentChatLog } from '@eigenpal/docx-editor-react';
-  + import { AgentPanel, AgentChatLog } from '@eigenpal/docx-editor-agents/react';
+  - import { AgentPanel, AgentChatLog } from '@sqren/docx-editor-react';
+  + import { AgentPanel, AgentChatLog } from '@sqren/docx-editor-agents/react';
   ```
 
   The agent components no longer call `useTranslation` directly — pass localized `*Label` props instead. `<DocxEditor>`'s built-in agent panel slot still forwards localized strings automatically.
@@ -155,7 +155,7 @@
 
   ## License moves to Apache 2.0
 
-  All published packages relicense to Apache 2.0. Notably: `@eigenpal/docx-editor-agents` was AGPL-3.0-or-later — the relicense lifts copyleft obligations on agent embedders.
+  All published packages relicense to Apache 2.0. Notably: `@sqren/docx-editor-agents` was AGPL-3.0-or-later — the relicense lifts copyleft obligations on agent embedders.
 
 ### Patch Changes
 

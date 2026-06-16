@@ -28,10 +28,10 @@ import { ImageSelectionOverlay } from './overlays/ImageSelectionOverlay';
 import { DecorationLayer } from './overlays/DecorationLayer';
 
 // Layout engine
-import type { Layout } from '@eigenpal/docx-editor-core/layout-engine';
+import type { Layout } from '@sqren/docx-editor-core/layout-engine';
 
 // Layout bridge
-import { DEFAULT_PAGE_HEIGHT_PX } from '@eigenpal/docx-editor-core/layout-bridge';
+import { DEFAULT_PAGE_HEIGHT_PX } from '@sqren/docx-editor-core/layout-bridge';
 
 // Selection sync
 import { LayoutSelectionGate } from './internals/LayoutSelectionGate';
@@ -49,8 +49,8 @@ import type {
   StyleDefinitions,
   SectionProperties,
   HeaderFooter,
-} from '@eigenpal/docx-editor-core/types/document';
-import type { WrapType } from '@eigenpal/docx-editor-core/docx/wrapTypes';
+} from '@sqren/docx-editor-core/types/document';
+import type { WrapType } from '@sqren/docx-editor-core/docx/wrapTypes';
 import type { RenderedDomContext } from '../../plugin-api/types';
 import {
   DEFAULT_PAGE_WIDTH,
@@ -112,7 +112,7 @@ export interface PagedEditorProps {
   /** External ProseMirror plugins. */
   externalPlugins?: Plugin[];
   /** Extension manager for plugins/schema/commands (optional — falls back to default) */
-  extensionManager?: import('@eigenpal/docx-editor-core/prosemirror/extensions').ExtensionManager;
+  extensionManager?: import('@sqren/docx-editor-core/prosemirror/extensions').ExtensionManager;
   /** Callback when editor is ready. */
   onReady?: (ref: PagedEditorRef) => void;
   /** Callback when rendered DOM context is ready. */

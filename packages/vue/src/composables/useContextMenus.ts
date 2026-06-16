@@ -13,13 +13,10 @@
 import { computed, ref, type ComputedRef, type Ref, type ShallowRef } from 'vue';
 import type { EditorView } from 'prosemirror-view';
 import { TextSelection, NodeSelection } from 'prosemirror-state';
-import {
-  captureInlinePositionEmu,
-  findImageElement,
-} from '@eigenpal/docx-editor-core/layout-painter';
-import { getTableContext } from '@eigenpal/docx-editor-core/prosemirror/extensions/nodes/TableExtension';
-import type { ImageLayoutTarget } from '@eigenpal/docx-editor-core/prosemirror/commands';
-import type { WrapType } from '@eigenpal/docx-editor-core/docx/wrapTypes';
+import { captureInlinePositionEmu, findImageElement } from '@sqren/docx-editor-core/layout-painter';
+import { getTableContext } from '@sqren/docx-editor-core/prosemirror/extensions/nodes/TableExtension';
+import type { ImageLayoutTarget } from '@sqren/docx-editor-core/prosemirror/commands';
+import type { WrapType } from '@sqren/docx-editor-core/docx/wrapTypes';
 import {
   copyImageToClipboard,
   pasteFromClipboard,
