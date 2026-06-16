@@ -71,6 +71,7 @@
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "bun run build:packages && changeset publish",
+    "release:fork": "node scripts/publish-fork.mjs",
     "prepare": "husky"
   },
   "devDependencies": {
