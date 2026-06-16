@@ -9,6 +9,8 @@ import {
   setContentControlContentTr,
   removeContentControlTr,
   setContentControlValueTr,
+  wrapContentControlByTextTr,
+  resolveOccurrence,
   type SelectionState,
   type PMContentControl,
 } from '@eigenpal/docx-editor-core/prosemirror';
@@ -254,6 +256,24 @@ export function useDocxEditorRefApi({
           if (err instanceof ContentControlNotFoundError) return false;
           throw err;
         }
+      },
+
+      wrapContentControl: (
+        locator: { text: string; occurrence?: number; paraId?: string },
+        props: { tag: string; alias?: string; sdtType?: 'richText' | 'plainText' }
+      ): { status: 'wrapped' | 'not-found' | 'crosses-inline-boundary'; tag?: string } => {
+        const view = pagedEditorRef.current?.getView();
+        if (!view) return { status: 'not-found' };
+        // Distinguish "text/occurrence not found" from "found but un-wrappable".
+        if (!resolveOccurrence(view.state.doc, locator)) return { status: 'not-found' };
+        const tr = wrapContentControlByTextTr(view.state, locator, {
+          sdtType: props.sdtType ?? 'richText',
+          tag: props.tag,
+          ...(props.alias !== undefined ? { alias: props.alias } : {}),
+        });
+        if (!tr) return { status: 'crosses-inline-boundary' };
+        view.dispatch(tr);
+        return { status: 'wrapped', tag: props.tag };
       },
 
       onContentChange: (listener) => {

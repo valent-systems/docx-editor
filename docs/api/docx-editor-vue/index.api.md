@@ -119,6 +119,18 @@ export type DocxEditorRef = EditorRefLike & {
     setContentControlValue(filter: ContentControlFilter, value: ContentControlValue, options?: {
         force?: boolean;
     }): boolean;
+    wrapContentControl(locator: {
+        text: string;
+        occurrence?: number;
+        paraId?: string;
+    }, props: {
+        tag: string;
+        alias?: string;
+        sdtType?: 'richText' | 'plainText';
+    }): {
+        status: 'wrapped' | 'not-found' | 'crosses-inline-boundary';
+        tag?: string;
+    };
 };
 
 // @public (undocumented)

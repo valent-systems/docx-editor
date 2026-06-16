@@ -126,13 +126,22 @@ export {
   getContentControlText,
   setContentControlContent,
   removeContentControl,
+  fillContentControl,
   ContentControlNotFoundError,
   ContentControlLockedError,
   ContentControlTypeError,
   ContentControlBoundError,
   type ContentControlFilter,
   type ContentControlInfo,
+  type FillResult,
+  type FillStatus,
 } from './agent/contentControls';
+export {
+  wrapInlineContentControl,
+  type WrapLocator,
+  type WrapProps,
+  type WrapResult,
+} from './agent/wrapContentControl';
 export {
   setContentControlValue,
   formatSdtDate,

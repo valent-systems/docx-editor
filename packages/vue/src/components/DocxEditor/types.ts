@@ -169,7 +169,7 @@ export type DocxEditorRef = EditorRefLike & {
   loadDocumentBuffer(buffer: DocxInput): Promise<void>;
   /** Tear down the editor (destroys the PM view + frees listeners). */
   destroy(): void;
-  /** List block-level content controls (SDTs), optionally filtered by tag/alias/id/type. */
+  /** List content controls (SDTs) — block + inline, incl. table cells — optionally filtered by tag/alias/id/type. */
   getContentControls(filter?: ContentControlFilter): PMContentControl[];
   /** Scroll the first content control matching `filter` into view. False if none. */
   scrollToContentControl(filter: ContentControlFilter): boolean;
@@ -190,4 +190,14 @@ export type DocxEditorRef = EditorRefLike & {
     value: ContentControlValue,
     options?: { force?: boolean }
   ): boolean;
+  /**
+   * Plant a NEW inline content control around an occurrence-precise placeholder
+   * span. `locator` selects by `text` + 0-based `occurrence` (scoped to `paraId`
+   * if given); `props.tag` is the stable fill-time id. Returns `wrapped`, or
+   * `not-found` / `crosses-inline-boundary`. One undoable edit.
+   */
+  wrapContentControl(
+    locator: { text: string; occurrence?: number; paraId?: string },
+    props: { tag: string; alias?: string; sdtType?: 'richText' | 'plainText' }
+  ): { status: 'wrapped' | 'not-found' | 'crosses-inline-boundary'; tag?: string };
 };

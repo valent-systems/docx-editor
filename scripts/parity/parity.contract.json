@@ -87,7 +87,8 @@
       "scrollToPosition",
       "setContentControlContent",
       "setContentControlValue",
-      "setZoom"
+      "setZoom",
+      "wrapContentControl"
     ],
     "pairedViaInheritance": {
       "addComment": "Inherited via EditorRefLike. Identical signature on both adapters.",

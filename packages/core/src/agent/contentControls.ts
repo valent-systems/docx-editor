@@ -20,11 +20,15 @@ import type {
   DocumentBody,
   BlockContent,
   BlockSdt,
+  InlineSdt,
+  ParagraphContent,
+  Run,
+  HeaderFooter,
   SdtType,
   SdtProperties,
   SdtDataBinding,
 } from '../types/document';
-import { getParagraphText, getTableText } from './text-utils';
+import { getParagraphText, getRunText, getTableText } from './text-utils';
 
 /** Filter for {@link findContentControls}. All provided fields must match (AND). */
 export interface ContentControlFilter {
@@ -65,12 +69,25 @@ export interface ContentControlInfo {
   /** Plain text of the control's content (paragraphs/tables/nested controls flattened). */
   text: string;
   /**
-   * Block-index path from the document body to this control. Top-level
-   * controls are `[i]`; a control nested inside the i-th body block's content
-   * is `[i, j]`, and so on. Stable address for a follow-up edit.
+   * Whether this is a block-level (`w:sdt` wrapping paragraphs/tables) or an
+   * inline (`w:sdt` mid-paragraph) content control. Inline controls are the
+   * ones planted by {@link wrapInlineContentControl} around placeholder spans.
+   */
+  kind: 'block' | 'inline';
+  /**
+   * Which content tree the control lives in. `header`/`footer` controls live
+   * outside the document body and are addressed by `tag`/`id`, not by `path`.
+   */
+  container: 'body' | 'header' | 'footer';
+  /**
+   * Index path from the container root to this control. Block controls are
+   * addressed `[i]` (or `[i, j]` when nested in another control); a control
+   * inside a table cell is `[blockIdx, rowIdx, cellIdx, …]`; the last element of
+   * an inline control's path is its index within the host paragraph's inline
+   * content. Informational — the durable address is `tag`/`id`.
    */
   path: number[];
-  /** Nesting depth (0 = direct child of the body). */
+  /** Path nesting depth (`path.length - 1`). */
   depth: number;
 }
 
@@ -79,7 +96,7 @@ function bodyOf(input: Document | DocumentBody): DocumentBody {
   return 'package' in input ? input.package.document : input;
 }
 
-/** Plain text of a control's content, descending into tables and nested SDTs. */
+/** Plain text of a block control's content, descending into tables and nested SDTs. */
 export function getContentControlText(control: BlockSdt): string {
   return blocksText(control.content);
 }
@@ -94,6 +111,16 @@ function blocksText(blocks: BlockContent[]): string {
   return parts.join('\n');
 }
 
+/** Plain text of an inline control's content (runs + nested inline controls). */
+function inlineText(content: InlineSdt['content']): string {
+  let text = '';
+  for (const item of content) {
+    if (item.type === 'run') text += getRunText(item);
+    else if (item.type === 'inlineSdt') text += inlineText(item.content);
+  }
+  return text;
+}
+
 function matches(props: SdtProperties, filter: ContentControlFilter): boolean {
   if (filter.tag !== undefined && props.tag !== filter.tag) return false;
   if (filter.alias !== undefined && props.alias !== filter.alias) return false;
@@ -102,53 +129,109 @@ function matches(props: SdtProperties, filter: ContentControlFilter): boolean {
   return true;
 }
 
-function infoOf(control: BlockSdt, path: number[]): ContentControlInfo {
-  const p = control.properties;
+function infoOf(
+  props: SdtProperties,
+  text: string,
+  kind: 'block' | 'inline',
+  container: ContentControlInfo['container'],
+  path: number[]
+): ContentControlInfo {
   return {
-    tag: p.tag,
-    alias: p.alias,
-    id: p.id,
-    sdtType: p.sdtType,
-    lock: p.lock,
-    listItems: p.listItems,
-    placeholder: p.placeholder,
-    showingPlaceholder: p.showingPlaceholder,
-    checked: p.checked,
-    dateFormat: p.dateFormat,
-    dataBinding: p.dataBinding,
-    text: getContentControlText(control),
+    tag: props.tag,
+    alias: props.alias,
+    id: props.id,
+    sdtType: props.sdtType,
+    lock: props.lock,
+    listItems: props.listItems,
+    placeholder: props.placeholder,
+    showingPlaceholder: props.showingPlaceholder,
+    checked: props.checked,
+    dateFormat: props.dateFormat,
+    dataBinding: props.dataBinding,
+    text,
+    kind,
+    container,
     path,
     depth: path.length - 1,
   };
 }
 
+/** Discover inline controls within a paragraph's inline content (recursing nested). */
+function walkInline(
+  content: ParagraphContent[],
+  parentPath: number[],
+  container: ContentControlInfo['container'],
+  filter: ContentControlFilter,
+  out: ContentControlInfo[]
+): void {
+  for (let k = 0; k < content.length; k++) {
+    const item = content[k];
+    if (item.type === 'inlineSdt') {
+      const path = [...parentPath, k];
+      if (matches(item.properties, filter)) {
+        out.push(infoOf(item.properties, inlineText(item.content), 'inline', container, path));
+      }
+      walkInline(item.content as ParagraphContent[], path, container, filter, out); // nested
+    }
+  }
+}
+
 /**
- * Find every block-level content control in the document, optionally filtered
- * by tag/alias/id/type. Results are in document order; nested controls follow
- * their parent. Searches the body and controls nested inside controls. Table
- * cells are not searched (the current model/parser does not surface cell-level
- * controls), and headers/footers live in a separate content tree.
+ * Discover block + inline controls within a block-content tree, descending into
+ * block controls, table cells, and paragraph inline content.
+ */
+function walkBlocks(
+  blocks: BlockContent[],
+  parentPath: number[],
+  container: ContentControlInfo['container'],
+  filter: ContentControlFilter,
+  out: ContentControlInfo[]
+): void {
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i];
+    const path = [...parentPath, i];
+    if (block.type === 'blockSdt') {
+      if (matches(block.properties, filter)) {
+        out.push(infoOf(block.properties, getContentControlText(block), 'block', container, path));
+      }
+      walkBlocks(block.content, path, container, filter, out); // nested block controls
+    } else if (block.type === 'paragraph') {
+      walkInline(block.content, path, container, filter, out); // inline controls
+    } else if (block.type === 'table') {
+      for (let r = 0; r < block.rows.length; r++) {
+        const row = block.rows[r];
+        for (let c = 0; c < row.cells.length; c++) {
+          walkBlocks(row.cells[c].content, [...path, r, c], container, filter, out);
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Find every content control in the document, optionally filtered by
+ * tag/alias/id/type. Results are in document order; nested controls follow
+ * their parent. Discovery reaches **block** controls (body, nested, header/
+ * footer) and **inline** controls wherever they live — including inside table
+ * cells and mid-paragraph (the spans planted by {@link wrapInlineContentControl}).
+ * Each result carries `kind` (`block`/`inline`) and `container`
+ * (`body`/`header`/`footer`). When given a {@link DocumentBody} only the body is
+ * searched; pass the {@link Document} to also reach headers/footers.
  */
 export function findContentControls(
   input: Document | DocumentBody,
   filter: ContentControlFilter = {}
 ): ContentControlInfo[] {
   const out: ContentControlInfo[] = [];
-
-  // Controls live at body level or nested inside other controls; a table cell
-  // cannot hold one in this model, so we only recurse through blockSdt content.
-  const walk = (blocks: BlockContent[], parentPath: number[]): void => {
-    for (let i = 0; i < blocks.length; i++) {
-      const block = blocks[i];
-      if (block.type === 'blockSdt') {
-        const path = [...parentPath, i];
-        if (matches(block.properties, filter)) out.push(infoOf(block, path));
-        walk(block.content, path); // nested controls
-      }
+  walkBlocks(bodyOf(input).content, [], 'body', filter, out);
+  if ('package' in input) {
+    for (const hf of input.package.headers?.values() ?? []) {
+      walkBlocks(hf.content, [], 'header', filter, out);
     }
-  };
-
-  walk(bodyOf(input).content, []);
+    for (const hf of input.package.footers?.values() ?? []) {
+      walkBlocks(hf.content, [], 'footer', filter, out);
+    }
+  }
   return out;
 }
 
@@ -345,11 +428,204 @@ export function rebuild(doc: Document, content: BlockContent[]): Document {
   };
 }
 
+// ============================================================================
+// UNIVERSAL EDIT (first matching control anywhere — block OR inline)
+// ============================================================================
+//
+// `applyToFirst` (above) edits block controls in the body and is shared by the
+// repeating-section / typed-value paths. The mutators below need to reach
+// *inline* controls (the spans planted by `wrapInlineContentControl`) wherever
+// they live — including inside table cells and headers/footers — so they use
+// this broader traversal, applying `blockOp` to a matching block control and
+// `inlineOp` to a matching inline control. The first match (document order)
+// wins; untouched subtrees keep their identity (returned arrays are reused when
+// nothing changed) so the transform stays pure and cheap.
+
+type BlockControlOp = (control: BlockSdt) => BlockContent[];
+type InlineControlOp = (control: InlineSdt) => InlineSdt['content'];
+
+interface EditState {
+  done: boolean;
+}
+
+function editInline(
+  content: ParagraphContent[],
+  filter: ContentControlFilter,
+  inlineOp: InlineControlOp,
+  state: EditState
+): ParagraphContent[] {
+  let changed = false;
+  const out: ParagraphContent[] = [];
+  for (const item of content) {
+    if (state.done || item.type !== 'inlineSdt') {
+      out.push(item);
+      continue;
+    }
+    if (matches(item.properties, filter)) {
+      out.push(...inlineOp(item));
+      state.done = true;
+      changed = true;
+      continue;
+    }
+    const nested = editInline(item.content as ParagraphContent[], filter, inlineOp, state);
+    if (nested !== (item.content as ParagraphContent[])) {
+      out.push({ ...item, content: nested as InlineSdt['content'] });
+      changed = true;
+    } else {
+      out.push(item);
+    }
+  }
+  return changed ? out : content;
+}
+
+function editBlocks(
+  blocks: BlockContent[],
+  filter: ContentControlFilter,
+  blockOp: BlockControlOp,
+  inlineOp: InlineControlOp,
+  state: EditState
+): BlockContent[] {
+  let changed = false;
+  const out: BlockContent[] = [];
+  for (const block of blocks) {
+    if (state.done) {
+      out.push(block);
+      continue;
+    }
+    if (block.type === 'blockSdt') {
+      if (matches(block.properties, filter)) {
+        out.push(...blockOp(block));
+        state.done = true;
+        changed = true;
+        continue;
+      }
+      const nested = editBlocks(block.content, filter, blockOp, inlineOp, state);
+      if (nested !== block.content) {
+        out.push({ ...block, content: nested });
+        changed = true;
+      } else {
+        out.push(block);
+      }
+    } else if (block.type === 'paragraph') {
+      const content = editInline(block.content, filter, inlineOp, state);
+      if (content !== block.content) {
+        out.push({ ...block, content });
+        changed = true;
+      } else {
+        out.push(block);
+      }
+    } else if (block.type === 'table') {
+      let tableChanged = false;
+      const rows = block.rows.map((row) => {
+        if (state.done) return row;
+        let rowChanged = false;
+        const cells = row.cells.map((cell) => {
+          if (state.done) return cell;
+          const cellContent = editBlocks(cell.content, filter, blockOp, inlineOp, state);
+          if (cellContent !== cell.content) {
+            rowChanged = true;
+            // Fill/remove keeps a paragraph a paragraph and never adds a
+            // blockSdt to a cell, so the cell's narrower content type holds.
+            return { ...cell, content: cellContent as typeof cell.content };
+          }
+          return cell;
+        });
+        if (rowChanged) {
+          tableChanged = true;
+          return { ...row, cells };
+        }
+        return row;
+      });
+      if (tableChanged) {
+        out.push({ ...block, rows });
+        changed = true;
+      } else {
+        out.push(block);
+      }
+    } else {
+      out.push(block);
+    }
+  }
+  return changed ? out : blocks;
+}
+
+function editHeaderFooterMap(
+  map: Map<string, HeaderFooter>,
+  filter: ContentControlFilter,
+  blockOp: BlockControlOp,
+  inlineOp: InlineControlOp,
+  state: EditState
+): Map<string, HeaderFooter> {
+  let changed = false;
+  const next = new Map<string, HeaderFooter>();
+  for (const [key, hf] of map) {
+    if (state.done) {
+      next.set(key, hf);
+      continue;
+    }
+    const content = editBlocks(hf.content, filter, blockOp, inlineOp, state);
+    if (content !== hf.content) {
+      next.set(key, { ...hf, content });
+      changed = true;
+    } else {
+      next.set(key, hf);
+    }
+  }
+  return changed ? next : map;
+}
+
 /**
- * Replace the content of the first control matching `filter`. `replacement`
- * may be a string (split into paragraphs on newlines) or block content. The
- * control's properties, tag/alias, and lossless raw `w:sdtPr` are preserved —
- * only the contained blocks change, so the result still round-trips.
+ * Apply the first matching control's op across the document body, table cells,
+ * and headers/footers. Returns the new document and whether a match was found.
+ * Pure — `doc` is not mutated.
+ */
+function applyToFirstControl(
+  doc: Document,
+  filter: ContentControlFilter,
+  blockOp: BlockControlOp,
+  inlineOp: InlineControlOp
+): { doc: Document; found: boolean } {
+  const state: EditState = { done: false };
+  const content = editBlocks(doc.package.document.content, filter, blockOp, inlineOp, state);
+  let headers = doc.package.headers;
+  let footers = doc.package.footers;
+  if (!state.done && headers) {
+    headers = editHeaderFooterMap(headers, filter, blockOp, inlineOp, state);
+  }
+  if (!state.done && footers) {
+    footers = editHeaderFooterMap(footers, filter, blockOp, inlineOp, state);
+  }
+  if (!state.done) return { doc, found: false };
+  return {
+    doc: {
+      ...doc,
+      package: {
+        ...doc.package,
+        document: { ...doc.package.document, content },
+        headers,
+        footers,
+      },
+    },
+    found: true,
+  };
+}
+
+/** A run carrying a single text node, used to fill an inline control. */
+function inlineRun(text: string): Run {
+  return {
+    type: 'run',
+    content: text ? [{ type: 'text', text, preserveSpace: true }] : [],
+  };
+}
+
+/**
+ * Replace the content of the first control matching `filter` — a **block** or
+ * an **inline** control, wherever it lives (body, table cell, header/footer).
+ * `replacement` may be a string (split into paragraphs on newlines for a block
+ * control; collapsed to one run for an inline control) or block content (block
+ * controls only — flattened to text for an inline control). The control's
+ * properties, tag/alias, and lossless raw `w:sdtPr` are preserved — only the
+ * contained content changes, so the result still round-trips.
  *
  * When the control was showing its placeholder (`w:showingPlcHdr`), that flag
  * is cleared so Word doesn't render the new content as placeholder text.
@@ -366,9 +642,7 @@ export function setContentControlContent(
   replacement: string | BlockContent[],
   options: { force?: boolean } = {}
 ): Document {
-  const state = { done: false };
-  const op: ControlOp = (control) => {
-    const props = control.properties;
+  const guard = (props: SdtProperties): void => {
     if (!options.force && isContentLocked(props.lock)) {
       throw new ContentControlLockedError(props.lock, 'edit');
     }
@@ -378,17 +652,33 @@ export function setContentControlContent(
     if (!options.force && isDataBound(props)) {
       throw new ContentControlBoundError();
     }
+  };
+  const blockOp: BlockControlOp = (control) => {
+    guard(control.properties);
     return [
       {
         ...control,
-        properties: propsAfterContentWrite(props),
-        content: toBlocks(replacement, { singleParagraph: props.sdtType === 'plainText' }),
+        properties: propsAfterContentWrite(control.properties),
+        content: toBlocks(replacement, {
+          singleParagraph: control.properties.sdtType === 'plainText',
+        }),
       },
     ];
   };
-  const content = applyToFirst(doc.package.document.content, filter, op, state);
-  if (!state.done) throw new ContentControlNotFoundError(filter);
-  return rebuild(doc, content);
+  const inlineOp: InlineControlOp = (control) => {
+    guard(control.properties);
+    const text = typeof replacement === 'string' ? replacement : blocksText(replacement);
+    return [
+      {
+        ...control,
+        properties: propsAfterContentWrite(control.properties),
+        content: text ? [inlineRun(text)] : [],
+      },
+    ];
+  };
+  const { doc: next, found } = applyToFirstControl(doc, filter, blockOp, inlineOp);
+  if (!found) throw new ContentControlNotFoundError(filter);
+  return next;
 }
 
 /**
@@ -408,20 +698,66 @@ export function removeContentControl(
   filter: ContentControlFilter,
   options: { force?: boolean; keepContent?: boolean } = {}
 ): Document {
-  const state = { done: false };
-  const op: ControlOp = (control) => {
-    if (!options.force && isDeletionLocked(control.properties.lock)) {
-      throw new ContentControlLockedError(control.properties.lock, 'remove');
+  const guardRemoval = (props: SdtProperties): void => {
+    if (!options.force && isDeletionLocked(props.lock)) {
+      throw new ContentControlLockedError(props.lock, 'remove');
     }
-    if (options.keepContent && !options.force && hasRepeatingSection(control.properties)) {
-      throw new ContentControlLockedError(control.properties.lock, 'remove');
+    if (options.keepContent && !options.force && hasRepeatingSection(props)) {
+      throw new ContentControlLockedError(props.lock, 'remove');
     }
+  };
+  const blockOp: BlockControlOp = (control) => {
+    guardRemoval(control.properties);
     return options.keepContent ? control.content : [];
   };
-  const content = applyToFirst(doc.package.document.content, filter, op, state);
-  if (!state.done) throw new ContentControlNotFoundError(filter);
+  const inlineOp: InlineControlOp = (control) => {
+    guardRemoval(control.properties);
+    return options.keepContent ? control.content : [];
+  };
+  const { doc: next, found } = applyToFirstControl(doc, filter, blockOp, inlineOp);
+  if (!found) throw new ContentControlNotFoundError(filter);
   // Never leave a structurally empty body (matches the live-editor path, which
   // auto-fills a paragraph). An empty <w:body> is invalid for Word consumers.
-  const safe = content.length > 0 ? content : [{ type: 'paragraph' as const, content: [] }];
-  return rebuild(doc, safe);
+  if (next.package.document.content.length === 0) {
+    return rebuild(next, [{ type: 'paragraph', content: [] }]);
+  }
+  return next;
+}
+
+// ============================================================================
+// RESULT-RETURNING FILL (success/blocked outcome, no throw)
+// ============================================================================
+
+/** Why a fill did or didn't happen — surfaced to a fill UI per field. */
+export type FillStatus = 'filled' | 'not-found' | 'locked' | 'typed' | 'data-bound';
+
+/** Outcome of {@link fillContentControl}; `doc` is the new document on `filled`. */
+export interface FillResult {
+  status: FillStatus;
+  doc?: Document;
+}
+
+/**
+ * Fill the first control matching `filter` with `value`, returning a
+ * discriminated {@link FillResult} instead of throwing. This is the
+ * result-shaped wrapper over {@link setContentControlContent} for a fill UI
+ * that must show a per-field outcome (filled / not found / locked / typed /
+ * data-bound) rather than fail silently. Handles block and inline controls
+ * everywhere (body, table cell, header/footer).
+ */
+export function fillContentControl(
+  doc: Document,
+  filter: ContentControlFilter,
+  value: string,
+  options: { force?: boolean } = {}
+): FillResult {
+  try {
+    return { status: 'filled', doc: setContentControlContent(doc, filter, value, options) };
+  } catch (err) {
+    if (err instanceof ContentControlNotFoundError) return { status: 'not-found' };
+    if (err instanceof ContentControlLockedError) return { status: 'locked' };
+    if (err instanceof ContentControlTypeError) return { status: 'typed' };
+    if (err instanceof ContentControlBoundError) return { status: 'data-bound' };
+    throw err;
+  }
 }

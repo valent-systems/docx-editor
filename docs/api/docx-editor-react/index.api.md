@@ -217,6 +217,18 @@ export interface DocxEditorRef {
         styleId: string;
     }) => boolean;
     setZoom: (zoom: number) => void;
+    wrapContentControl: (locator: {
+        text: string;
+        occurrence?: number;
+        paraId?: string;
+    }, props: {
+        tag: string;
+        alias?: string;
+        sdtType?: 'richText' | 'plainText';
+    }) => {
+        status: 'wrapped' | 'not-found' | 'crosses-inline-boundary';
+        tag?: string;
+    };
 }
 
 // @public

@@ -471,8 +471,9 @@ export interface DocxEditorRef {
   /** Get all comments. */
   getComments: () => Comment[];
   /**
-   * List block-level content controls (SDTs) in the live document, optionally
-   * filtered by `tag`/`alias`/`id`/`type`. Each result includes the control's
+   * List content controls (SDTs) in the live document, optionally filtered by
+   * `tag`/`alias`/`id`/`type`. Reaches block AND inline controls wherever they
+   * live (body, table cells, mid-paragraph). Each result includes the control's
    * text and PM position. Anchors for templates and document automation.
    */
   getContentControls: (filter?: ContentControlFilter) => PMContentControl[];
@@ -509,6 +510,19 @@ export interface DocxEditorRef {
     value: ContentControlValue,
     options?: { force?: boolean }
   ) => boolean;
+  /**
+   * Plant a NEW inline content control around an occurrence-precise placeholder
+   * span — the create side of the template-fill pipeline. `locator` selects the
+   * span by `text` + 0-based `occurrence` (within the `paraId` paragraph if
+   * given, else the whole document in reading order); `props.tag` is the stable
+   * id that later resolves the control for filling. Returns `wrapped` with the
+   * tag, or `not-found` / `crosses-inline-boundary` (the span spans a paragraph
+   * or un-splittable inline content). One undoable edit.
+   */
+  wrapContentControl: (
+    locator: { text: string; occurrence?: number; paraId?: string },
+    props: { tag: string; alias?: string; sdtType?: 'richText' | 'plainText' }
+  ) => { status: 'wrapped' | 'not-found' | 'crosses-inline-boundary'; tag?: string };
   /** Subscribe to document changes. Fires after every committed edit. Returns unsubscribe. */
   onContentChange: (listener: (document: Document) => void) => () => void;
   /** Subscribe to selection changes (cursor moves / selection changes). Returns unsubscribe. */

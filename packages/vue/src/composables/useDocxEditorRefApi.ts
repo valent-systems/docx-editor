@@ -28,6 +28,8 @@ import {
   setContentControlContentTr,
   removeContentControlTr,
   setContentControlValueTr,
+  wrapContentControlByTextTr,
+  resolveOccurrence,
   type PMContentControl,
 } from '@eigenpal/docx-editor-core/prosemirror';
 import {
@@ -276,6 +278,23 @@ export function useDocxEditorRefApi(opts: UseDocxEditorRefApiOptions): {
     }
   }
 
+  function wrapContentControl(
+    locator: { text: string; occurrence?: number; paraId?: string },
+    props: { tag: string; alias?: string; sdtType?: 'richText' | 'plainText' }
+  ): { status: 'wrapped' | 'not-found' | 'crosses-inline-boundary'; tag?: string } {
+    const view = opts.editorView.value;
+    if (!view) return { status: 'not-found' };
+    if (!resolveOccurrence(view.state.doc, locator)) return { status: 'not-found' };
+    const tr = wrapContentControlByTextTr(view.state, locator, {
+      sdtType: props.sdtType ?? 'richText',
+      tag: props.tag,
+      ...(props.alias !== undefined ? { alias: props.alias } : {}),
+    });
+    if (!tr) return { status: 'crosses-inline-boundary' };
+    view.dispatch(tr);
+    return { status: 'wrapped', tag: props.tag };
+  }
+
   function getPageContent(pageNumber: number) {
     return getPageContentImpl(opts.editorView.value, opts.layout.value, pageNumber);
   }
@@ -321,6 +340,7 @@ export function useDocxEditorRefApi(opts: UseDocxEditorRefApiOptions): {
     setContentControlContent,
     removeContentControl,
     setContentControlValue,
+    wrapContentControl,
     applyFormatting: opts.applyFormatting,
     setParagraphStyle: opts.setParagraphStyle,
     insertBreak: opts.insertBreak,

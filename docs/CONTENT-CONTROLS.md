@@ -18,22 +18,34 @@ Operate directly on a parsed `Document` with no editor or DOM. Import from
 ```ts
 import {
   parseDocx,
+  wrapInlineContentControl,
   findContentControls,
   findContentControl,
   setContentControlContent,
+  fillContentControl,
   removeContentControl,
   serializeDocx, // or createDocx for bytes
 } from '@eigenpal/docx-editor-core/headless';
 
 const doc = await parseDocx(buffer);
 
-// Discover controls (filter by tag / alias / id / type)
+// Create: wrap an occurrence-precise placeholder span in a new inline control
+// with a stable tag. `occurrence` (+ optional `paraId` scope) disambiguates
+// identical text, so two identical clauses get independent controls.
+const r = wrapInlineContentControl(doc, { text: '[volume]' }, { tag: 'volume' });
+//   { status: 'wrapped'; doc; tag } | 'not-found' | 'occurrence-out-of-range' | 'crosses-inline-boundary'
+
+// Discover controls (filter by tag / alias / id / type) — block AND inline,
+// in the body, table cells, and headers/footers.
 const controls = findContentControls(doc); // ContentControlInfo[]
 const intro = findContentControl(doc, { tag: 'intro' });
-//   { tag, alias, id, sdtType, lock, listItems, placeholder, text, path, depth }
+//   { tag, alias, id, sdtType, lock, listItems, placeholder, text, kind, container, path, depth }
 
-// Fill a control by tag (string → paragraphs, or pass BlockContent[])
+// Fill a control by tag (string → paragraphs for a block control, one run for
+// an inline control). Throwing variant, plus a result-returning wrapper:
 let next = setContentControlContent(doc, { tag: 'intro' }, 'Filled by template');
+const filled = fillContentControl(doc, { tag: 'volume' }, '500,000 units');
+//   { status: 'filled'; doc } | 'not-found' | 'locked' | 'typed' | 'data-bound'
 
 // Conditional sections: drop a control, or unwrap it (keep its content)
 next = removeContentControl(next, { tag: 'optionalClause' });
@@ -139,16 +151,20 @@ this flag before treating `text` as real data.
   as the `{{mustache}}` template variables used by the docxtemplater plugin.
 - Locks: `contentLocked`/`sdtContentLocked` block content edits;
   `sdtLocked`/`sdtContentLocked` block removal.
-- Scope today: **block-level** controls in the **document body**. Inline
-  controls parse and round-trip but are not part of this addressing API; typed
-  value setters (set a dropdown selection / checkbox / date) and live
-  `dataBinding`/`repeatingSection` behavior are roadmap.
-- **Header/footer controls are not discovered.** Controls in headers/footers
-  (agency name, document number, classification banner, effective date) live in
-  a separate content tree this API does not walk. `findContentControls` will
-  not return them and `setContentControlContent`/`removeContentControl` will
-  report "not found" for a control that is plainly visible in the
-  header/footer. This is a known limitation, not a bug.
-- **Table cells are not searched.** OOXML permits a block control inside a
-  `w:tc`, but the table parser does not yet surface cell-level controls, so
-  they are not discovered (same silent not-found caveat).
+- **Discovery and edit reach both block and inline controls, wherever they
+  live** — document body, **table cells**, **headers/footers**, and
+  mid-paragraph (inline). `ContentControlInfo` carries `kind` (`block`/`inline`)
+  and `container` (`body`/`header`/`footer`). `setContentControlContent` /
+  `removeContentControl` / `fillContentControl` operate on the first match in
+  document order across all of these.
+- **Creating controls.** {@link wrapInlineContentControl} (headless) and the
+  editor ref's `wrapContentControl` plant a new inline control around an
+  occurrence-precise placeholder span. A created control has no captured
+  `rawPropertiesXml`, so the serializer synthesizes a sequence-valid `w:sdtPr`
+  from its `tag`/`id`/`sdtType` — it round-trips through `.docx` and Word.
+- **Cell-level controls are inline.** A control inside a table cell is planted
+  as an *inline* `w:sdt` within the cell's paragraph (a cell holds paragraphs;
+  paragraphs hold inline content). The model does **not** add a block `w:sdt`
+  directly under `w:tc` — `TableCell.content` is unchanged.
+- Typed-control value setters, live `dataBinding`, and `repeatingSection`
+  expansion remain as documented above / on the roadmap.

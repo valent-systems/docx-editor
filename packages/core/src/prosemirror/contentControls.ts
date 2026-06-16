@@ -30,6 +30,7 @@ import {
 } from '../agent/repeatingSection';
 import type { FontFamilyAttrs } from './schema/marks';
 import { sdtAttrsToProps, sdtPropsToAttrs } from './conversion/sdtAttrs';
+import { resolveOccurrence, type OccurrenceLocator } from './occurrenceSearch';
 import type { SdtType, SdtProperties, SdtDataBinding } from '../types/document';
 
 /** A control discovered in the PM doc, with its PM position for scroll/edit. */
@@ -131,26 +132,6 @@ export function findContentControlPos(doc: PMNode, filter: ContentControlFilter)
   return findContentControlsInPM(doc, filter)[0]?.pos ?? null;
 }
 
-/** Locate the first matching blockSdt node + its position in the PM doc. */
-function locateBlockSdt(
-  doc: PMNode,
-  filter: ContentControlFilter
-): { node: PMNode; pos: number } | null {
-  let found: { node: PMNode; pos: number } | null = null;
-  doc.descendants((node, pos) => {
-    if (found) return false;
-    if (
-      node.type.name === 'blockSdt' &&
-      attrsMatch(node.attrs as Record<string, unknown>, filter)
-    ) {
-      found = { node, pos };
-      return false;
-    }
-    return true;
-  });
-  return found;
-}
-
 /** Locate the first matching block or inline SDT node + its position in the PM doc. */
 function locateValueControl(
   doc: PMNode,
@@ -187,7 +168,9 @@ export function setContentControlContentTr(
   text: string,
   options: { force?: boolean } = {}
 ): Transaction {
-  const target = locateBlockSdt(state.doc, filter);
+  // Match a block OR an inline control (the spans planted by the wrap API are
+  // inline), wherever it lives in the doc.
+  const target = locateValueControl(state.doc, filter);
   if (!target) throw new ContentControlNotFoundError(filter);
   const attrs = target.node.attrs as Record<string, unknown>;
   if (!options.force && isContentLocked(attrs.lock as SdtProperties['lock'])) {
@@ -201,13 +184,19 @@ export function setContentControlContentTr(
     throw new ContentControlBoundError();
   }
   const { schema } = state;
-  const lines = sdtType === 'plainText' ? [text] : text.split('\n');
-  const paragraphs = lines.map((line) =>
-    schema.nodes.paragraph.create(null, line ? schema.text(line) : null)
-  );
   const from = target.pos + 1;
   const to = target.pos + 1 + target.node.content.size;
-  const tr = state.tr.replaceWith(from, to, paragraphs);
+  const replacement =
+    target.node.type.name === 'sdt'
+      ? // Inline control: content is `inline*` — a single text node (no paragraphs).
+        text
+        ? [schema.text(text)]
+        : []
+      : // Block control: one paragraph per line (plainText stays single-paragraph).
+        (sdtType === 'plainText' ? [text] : text.split('\n')).map((line) =>
+          schema.nodes.paragraph.create(null, line ? schema.text(line) : null)
+        );
+  const tr = state.tr.replaceWith(from, to, replacement);
   // Clear placeholder state so the written content isn't styled as placeholder.
   // The node's own start position is unaffected by the inner content replace.
   if (attrs.showingPlaceholder || /showingPlcHdr/.test(String(attrs.rawPropertiesXml ?? ''))) {
@@ -233,7 +222,7 @@ export function removeContentControlTr(
   filter: ContentControlFilter,
   options: { force?: boolean; keepContent?: boolean } = {}
 ): Transaction {
-  const target = locateBlockSdt(state.doc, filter);
+  const target = locateValueControl(state.doc, filter);
   if (!target) throw new ContentControlNotFoundError(filter);
   const lock = target.node.attrs.lock as SdtProperties['lock'];
   if (!options.force && isDeletionLocked(lock)) {
@@ -252,6 +241,52 @@ export function removeContentControlTr(
   return options.keepContent
     ? state.tr.replaceWith(start, end, target.node.content)
     : state.tr.delete(start, end);
+}
+
+// ── create: wrap a range in a new inline content control ─────────────────────
+
+/**
+ * Build a transaction that wraps the inline range `[from, to)` in a new inline
+ * content control (`sdt` node) carrying `props` (`tag` is the durable id; omit
+ * `rawPropertiesXml` so the serializer synthesizes a fresh `w:sdtPr`). Returns
+ * `null` if the range is invalid or crosses a paragraph / block boundary — the
+ * wrap is inline-only, so the selection must stay within one textblock.
+ */
+export function wrapRangeInContentControlTr(
+  state: EditorState,
+  range: { from: number; to: number },
+  props: SdtProperties
+): Transaction | null {
+  const { from, to } = range;
+  if (!(from >= 0 && to > from && to <= state.doc.content.size)) return null;
+  const $from = state.doc.resolve(from);
+  const $to = state.doc.resolve(to);
+  if (!$from.sameParent($to) || !$from.parent.isTextblock) return null;
+  const sdtType = state.schema.nodes.sdt;
+  if (!sdtType) return null;
+  const inlineContent = state.doc.slice(from, to).content;
+  let node: PMNode;
+  try {
+    node = sdtType.create(sdtPropsToAttrs(props), inlineContent);
+  } catch {
+    return null;
+  }
+  return state.tr.replaceRangeWith(from, to, node);
+}
+
+/**
+ * Resolve a `(text, occurrence, paraId?)` locator to a live range and wrap that
+ * occurrence in a new inline content control. Returns `null` when the text /
+ * occurrence does not resolve or the matched span can't be wrapped inline.
+ */
+export function wrapContentControlByTextTr(
+  state: EditorState,
+  locator: OccurrenceLocator,
+  props: SdtProperties
+): Transaction | null {
+  const match = resolveOccurrence(state.doc, locator);
+  if (!match) return null;
+  return wrapRangeInContentControlTr(state, { from: match.from, to: match.to }, props);
 }
 
 /**

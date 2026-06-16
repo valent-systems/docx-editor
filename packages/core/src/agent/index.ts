@@ -40,6 +40,7 @@ export {
   getParagraphText,
   getRunText,
   getHyperlinkText,
+  getInlineSdtText,
   getTableText,
   getBodyText,
   countWords,
@@ -103,20 +104,30 @@ export {
   DEFAULT_AI_ACTIONS,
 } from '../types/agentApi';
 
-// Content-control (SDT) addressing — discover and edit block controls by tag.
+// Content-control (SDT) addressing — discover, create, and edit controls by tag.
 export {
   findContentControls,
   findContentControl,
   getContentControlText,
   setContentControlContent,
   removeContentControl,
+  fillContentControl,
   ContentControlNotFoundError,
   ContentControlLockedError,
   ContentControlTypeError,
   ContentControlBoundError,
   type ContentControlFilter,
   type ContentControlInfo,
+  type FillResult,
+  type FillStatus,
 } from './contentControls';
+// Plant new inline content controls around occurrence-precise placeholder spans.
+export {
+  wrapInlineContentControl,
+  type WrapLocator,
+  type WrapProps,
+  type WrapResult,
+} from './wrapContentControl';
 export {
   setContentControlValue,
   formatSdtDate,

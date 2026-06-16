@@ -12,6 +12,7 @@ import type {
   Paragraph,
   Run,
   Hyperlink,
+  InlineSdt,
   Table,
   TextFormatting,
 } from '../types/document';
@@ -33,9 +34,24 @@ export function getParagraphText(paragraph: Paragraph): string {
       texts.push(getRunText(item));
     } else if (item.type === 'hyperlink') {
       texts.push(getHyperlinkText(item));
+    } else if (item.type === 'inlineSdt') {
+      // Inline content controls carry real document text (e.g. a filled
+      // template field); include it so extraction reflects what Word renders.
+      texts.push(getInlineSdtText(item));
     }
   }
 
+  return texts.join('');
+}
+
+/** Plain text of an inline content control (runs + hyperlinks + nested controls). */
+export function getInlineSdtText(sdt: InlineSdt): string {
+  const texts: string[] = [];
+  for (const item of sdt.content) {
+    if (item.type === 'run') texts.push(getRunText(item));
+    else if (item.type === 'hyperlink') texts.push(getHyperlinkText(item));
+    else if (item.type === 'inlineSdt') texts.push(getInlineSdtText(item));
+  }
   return texts.join('');
 }
 

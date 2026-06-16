@@ -24,6 +24,7 @@ import type {
 } from '../../../types/document';
 import { serializeRun, serializeTextFormatting } from '../runSerializer';
 import { escapeXml } from '../xmlUtils';
+import { synthesizeSdtPr } from '../sdtPrSynth';
 
 /**
  * Serialize bookmark start (w:bookmarkStart)
@@ -196,54 +197,6 @@ export function serializeComplexField(field: ComplexField): string {
  */
 export function serializeInlineSdt(sdt: InlineSdt): string {
   const props = sdt.properties;
-  const prParts: string[] = [];
-
-  if (props.alias) prParts.push(`<w:alias w:val="${escapeXml(props.alias)}"/>`);
-  if (props.tag) prParts.push(`<w:tag w:val="${escapeXml(props.tag)}"/>`);
-  if (props.lock && props.lock !== 'unlocked') prParts.push(`<w:lock w:val="${props.lock}"/>`);
-  if (props.showingPlaceholder) prParts.push('<w:showingPlcHdr/>');
-
-  // Type-specific properties
-  switch (props.sdtType) {
-    case 'plainText':
-      prParts.push('<w:text/>');
-      break;
-    case 'date':
-      if (props.dateFormat) {
-        prParts.push(`<w:date w:fullDate="${escapeXml(props.dateFormat)}"/>`);
-      } else {
-        prParts.push('<w:date/>');
-      }
-      break;
-    case 'dropDownList': {
-      const items = (props.listItems ?? [])
-        .map(
-          (i) =>
-            `<w:listItem w:displayText="${escapeXml(i.displayText)}" w:value="${escapeXml(i.value)}"/>`
-        )
-        .join('');
-      prParts.push(`<w:dropDownList>${items}</w:dropDownList>`);
-      break;
-    }
-    case 'comboBox': {
-      const items = (props.listItems ?? [])
-        .map(
-          (i) =>
-            `<w:listItem w:displayText="${escapeXml(i.displayText)}" w:value="${escapeXml(i.value)}"/>`
-        )
-        .join('');
-      prParts.push(`<w:comboBox>${items}</w:comboBox>`);
-      break;
-    }
-    case 'checkbox':
-      prParts.push(
-        `<w14:checkbox><w14:checked w14:val="${props.checked ? '1' : '0'}"/></w14:checkbox>`
-      );
-      break;
-    case 'picture':
-      prParts.push('<w:picture/>');
-      break;
-  }
 
   const contentXml = sdt.content
     .map((item) => {
@@ -273,7 +226,7 @@ export function serializeInlineSdt(sdt: InlineSdt): string {
     })
     .join('');
 
-  const sdtPrXml = props.rawPropertiesXml ?? `<w:sdtPr>${prParts.join('')}</w:sdtPr>`;
+  const sdtPrXml = props.rawPropertiesXml ?? synthesizeSdtPr(props);
   const sdtEndPrXml = props.rawEndPropertiesXml ?? '';
   return `<w:sdt>${sdtPrXml}${sdtEndPrXml}<w:sdtContent>${contentXml}</w:sdtContent></w:sdt>`;
 }
