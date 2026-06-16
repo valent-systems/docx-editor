@@ -117,10 +117,12 @@ export interface ContentControlFilter {
 export interface ContentControlInfo {
     alias?: string;
     checked?: boolean;
+    container: 'body' | 'header' | 'footer';
     dataBinding?: SdtDataBinding;
     dateFormat?: string;
     depth: number;
     id?: number;
+    kind: 'block' | 'inline';
     listItems?: {
         displayText: string;
         value: string;
@@ -261,6 +263,22 @@ export interface ExtendedSelectionContext extends AgentSelectionContext {
 }
 
 // @public
+export function fillContentControl(doc: Document_2, filter: ContentControlFilter, value: string, options?: {
+    force?: boolean;
+}): FillResult;
+
+// @public
+export interface FillResult {
+    // (undocumented)
+    doc?: Document_2;
+    // (undocumented)
+    status: FillStatus;
+}
+
+// @public
+export type FillStatus = 'filled' | 'not-found' | 'locked' | 'typed' | 'data-bound';
+
+// @public
 export function findContentControl(input: Document_2 | DocumentBody, filter: ContentControlFilter): ContentControlInfo | undefined;
 
 // @public
@@ -335,6 +353,9 @@ export function getHyperlinkAtPosition(paragraph: Paragraph, offset: number): Hy
 
 // @public
 export function getHyperlinkText(hyperlink: Hyperlink): string;
+
+// @public
+export function getInlineSdtText(sdt: InlineSdt): string;
 
 // @public
 export function getParagraphAtIndex(body: DocumentBody, index: number): Paragraph | undefined;
@@ -596,5 +617,37 @@ export interface SuggestedAction {
     label: string;
     priority?: number;
 }
+
+// @public
+export function wrapInlineContentControl(doc: Document_2, locator: WrapLocator, props: WrapProps): WrapResult;
+
+// @public
+export interface WrapLocator {
+    occurrence?: number;
+    paraId?: string;
+    text: string;
+}
+
+// @public
+export interface WrapProps {
+    alias?: string;
+    id?: number;
+    sdtType?: Extract<SdtType, 'richText' | 'plainText'>;
+    tag: string;
+}
+
+// @public
+export type WrapResult = {
+    status: 'wrapped';
+    doc: Document_2;
+    tag: string;
+} | {
+    status: 'not-found';
+} | {
+    status: 'occurrence-out-of-range';
+    matches: number;
+} | {
+    status: 'crosses-inline-boundary';
+};
 
 ```

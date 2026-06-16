@@ -159,10 +159,12 @@ export interface ContentControlFilter {
 export interface ContentControlInfo {
     alias?: string;
     checked?: boolean;
+    container: 'body' | 'header' | 'footer';
     dataBinding?: SdtDataBinding;
     dateFormat?: string;
     depth: number;
     id?: number;
+    kind: 'block' | 'inline';
     listItems?: {
         displayText: string;
         value: string;
@@ -440,6 +442,22 @@ export interface ExtendedSelectionContext extends SelectionContext {
 
 // @public
 export function extractVariablesFromText(text: string): string[];
+
+// @public
+export function fillContentControl(doc: Document_2, filter: ContentControlFilter, value: string, options?: {
+    force?: boolean;
+}): FillResult;
+
+// @public
+export interface FillResult {
+    // (undocumented)
+    doc?: Document_2;
+    // (undocumented)
+    status: FillStatus;
+}
+
+// @public
+export type FillStatus = 'filled' | 'not-found' | 'locked' | 'typed' | 'data-bound';
 
 // @public
 export function findContentControl(input: Document_2 | DocumentBody, filter: ContentControlFilter): ContentControlInfo | undefined;
@@ -1532,6 +1550,38 @@ export interface VariableOccurrence {
 
 // @public
 export const VERSION = "0.0.2";
+
+// @public
+export function wrapInlineContentControl(doc: Document_2, locator: WrapLocator, props: WrapProps): WrapResult;
+
+// @public
+export interface WrapLocator {
+    occurrence?: number;
+    paraId?: string;
+    text: string;
+}
+
+// @public
+export interface WrapProps {
+    alias?: string;
+    id?: number;
+    sdtType?: Extract<SdtType, 'richText' | 'plainText'>;
+    tag: string;
+}
+
+// @public
+export type WrapResult = {
+    status: 'wrapped';
+    doc: Document_2;
+    tag: string;
+} | {
+    status: 'not-found';
+} | {
+    status: 'occurrence-out-of-range';
+    matches: number;
+} | {
+    status: 'crosses-inline-boundary';
+};
 
 // @public
 export interface ZodSchemaLike {

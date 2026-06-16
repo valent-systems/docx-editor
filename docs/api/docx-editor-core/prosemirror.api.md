@@ -117,6 +117,9 @@ export const documentStylesKey: PluginKey<StyleResolver | null>;
 export function ensureParaIdsInState(state: EditorState): EditorState;
 
 // @public
+export function enumerateMatches(doc: Node_2, needle: string): OccurrenceMatch[];
+
+// @public
 export function extractSelectionContext(state: EditorState): SelectionContext;
 
 // @public
@@ -330,6 +333,22 @@ export class LayoutSelectionGate {
 export function mergeCells(state: EditorState, dispatch?: (tr: Transaction) => void): boolean;
 
 // @public
+export interface OccurrenceLocator {
+    occurrence?: number;
+    paraId?: string;
+    text: string;
+}
+
+// @public
+export interface OccurrenceMatch {
+    from: number;
+    indexInPara: number;
+    occurrenceInPara: number;
+    paraId: string | null;
+    to: number;
+}
+
+// @public
 export interface ParagraphAttrs {
     // (undocumented)
     alignment?: ParagraphAlignment;
@@ -468,6 +487,9 @@ export interface ResolvedParagraphStyle {
     paragraphFormatting?: ParagraphFormatting;
     runFormatting?: TextFormatting;
 }
+
+// @public
+export function resolveOccurrence(doc: Node_2, locator: OccurrenceLocator): OccurrenceMatch | null;
 
 // @public (undocumented)
 export const schema: prosemirror_model.Schema<any, any>;
@@ -751,5 +773,14 @@ export interface UnderlineAttrs {
 
 // @public
 export function updateDocumentContent(originalDocument: Document_2, pmDoc: Node_2): Document_2;
+
+// @public
+export function wrapContentControlByTextTr(state: EditorState, locator: OccurrenceLocator, props: SdtProperties): Transaction | null;
+
+// @public
+export function wrapRangeInContentControlTr(state: EditorState, range: {
+    from: number;
+    to: number;
+}, props: SdtProperties): Transaction | null;
 
 ```
