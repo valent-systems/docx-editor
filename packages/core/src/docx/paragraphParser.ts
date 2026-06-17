@@ -25,6 +25,7 @@ import type {
 import type { StyleMap } from './styleParser';
 import { computeListRendering, type NumberingMap } from './numberingParser';
 import { findChild, getAttribute, type XmlElement } from './xmlParser';
+import { normalizeLongHexId } from '../utils/hexId';
 import { parseSectionProperties } from './sectionParser';
 
 import { parseParagraphProperties } from './paragraphParser/properties';
@@ -90,15 +91,17 @@ export function parseParagraph(
     content: [],
   };
 
-  // Get paragraph ID attributes (Word 2010+ uses these for collaboration)
+  // Get paragraph ID attributes (Word 2010+ uses these for collaboration).
+  // Foreign exporters sometimes emit malformed or out-of-range ids that Word
+  // and strict validators reject, so normalize them as they enter the model.
   const paraId = getAttribute(node, 'w14', 'paraId') ?? getAttribute(node, 'w', 'paraId');
   if (paraId) {
-    paragraph.paraId = paraId;
+    paragraph.paraId = normalizeLongHexId(paraId);
   }
 
   const textId = getAttribute(node, 'w14', 'textId') ?? getAttribute(node, 'w', 'textId');
   if (textId) {
-    paragraph.textId = textId;
+    paragraph.textId = normalizeLongHexId(textId);
   }
 
   // `<w:lastRenderedPageBreak/>` only makes sense in body flow; headers and

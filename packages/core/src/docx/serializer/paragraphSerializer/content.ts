@@ -93,6 +93,16 @@ export function serializeHyperlink(hyperlink: Hyperlink): string {
     })
     .join('');
 
+  // A hyperlink that would emit no attributes navigates nowhere; an empty
+  // wrapper is meaningless and rejected by strict validators, so fall back to
+  // the bare runs (e.g. a stale rId was dropped at save time). An href without
+  // an rId is an editor-created link awaiting registration — keep it wrapped
+  // (it is assigned an rId before export). Any other attribute (tooltip,
+  // tgtFrame, docLocation, ...) is preserved.
+  if (attrs.length === 0 && !hyperlink.href) {
+    return childrenXml;
+  }
+
   const attrsStr = attrs.length > 0 ? ' ' + attrs.join(' ') : '';
   return `<w:hyperlink${attrsStr}>${childrenXml}</w:hyperlink>`;
 }

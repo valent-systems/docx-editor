@@ -47,6 +47,8 @@ import {
   isSeparatorEndnote,
 } from './footnoteParser';
 import { parseComments } from './commentParser';
+import { removeOrphanCommentRanges } from './commentRangeIntegrity';
+import { dedupeParagraphIds } from './paragraphIdIntegrity';
 import { loadFontsWithMapping } from '../utils/fontLoader';
 import { type DocxInput, toArrayBuffer } from '../utils/docxInput';
 
@@ -306,6 +308,14 @@ export async function parseDocx(input: DocxInput, options: ParseOptions = {}): P
       templateVariables,
       warnings: warnings.length > 0 ? warnings : undefined,
     };
+
+    // Drop comment-range markers that don't resolve to a parsed comment, so the
+    // model never carries orphan anchors that Word/validators reject on export.
+    removeOrphanCommentRanges(document);
+
+    // Give every paragraph a unique w14:paraId; foreign exporters sometimes
+    // duplicate them, which Word flags as a collaboration-identity collision.
+    dedupeParagraphIds(document);
 
     const totalTime = performance.now() - parseStart;
     if (totalTime > 2000) {
