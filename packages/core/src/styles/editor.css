@@ -634,6 +634,36 @@
   background-color: var(--doc-bg-hover);
 }
 
+/* Outline / navigation toggle button (shown when the panel is collapsed).
+ * Google-Docs-style filled circular control: a resting disc + ring so it
+ * reads as a button against the gray document gutter (--doc-bg), darkening
+ * on hover. Adapters supply only position (it tracks horizontal scroll). */
+.docx-outline-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--doc-border-light);
+  background: var(--doc-bg-hover);
+  color: var(--doc-text-muted);
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease,
+    box-shadow 0.12s ease;
+}
+.docx-outline-toggle:hover {
+  background: var(--doc-border);
+  color: var(--doc-text);
+  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.18);
+}
+.docx-outline-toggle:focus-visible {
+  outline: 2px solid var(--doc-primary);
+  outline-offset: 2px;
+}
+
 /* ============================================================================
  * HEADER / FOOTER EDITING
  *
