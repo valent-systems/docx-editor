@@ -537,7 +537,8 @@ export const wordFeatures: WordFeature[] = [
     rendering: 'full',
     roundTrip: 'full',
     tier: 'community',
-    notes: 'Addressable by tag/id/alias from the headless API; works inside footnotes too.',
+    notes:
+      'Block and inline controls are addressable by tag/id/alias from the headless API and the live editor, including inline controls inside table cells; headers/footers via { scope: "all" }.',
     docsLink: '/docs/1.x/guides/content-controls',
   },
   {

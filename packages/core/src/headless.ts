@@ -132,6 +132,10 @@ export {
   ContentControlBoundError,
   type ContentControlFilter,
   type ContentControlInfo,
+  type ContentControlLocation,
+  type ContentControlStep,
+  type ContentControlAddress,
+  type FindContentControlsOptions,
 } from './agent/contentControls';
 export {
   setContentControlValue,

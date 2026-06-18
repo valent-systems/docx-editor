@@ -143,6 +143,14 @@ export interface CommentRangeStart {
 export function comparePositions(a: Position_2, b: Position_2): -1 | 0 | 1;
 
 // @public
+export interface ContentControlAddress {
+    // (undocumented)
+    location: ContentControlLocation;
+    // (undocumented)
+    steps: ContentControlStep[];
+}
+
+// @public
 export class ContentControlBoundError extends Error {
     constructor();
 }
@@ -157,16 +165,19 @@ export interface ContentControlFilter {
 
 // @public
 export interface ContentControlInfo {
+    address: ContentControlAddress;
     alias?: string;
     checked?: boolean;
     dataBinding?: SdtDataBinding;
     dateFormat?: string;
     depth: number;
     id?: number;
+    kind: 'block' | 'inline';
     listItems?: {
         displayText: string;
         value: string;
     }[];
+    location: ContentControlLocation;
     lock?: SdtProperties['lock'];
     path: number[];
     placeholder?: string;
@@ -177,6 +188,14 @@ export interface ContentControlInfo {
 }
 
 // @public
+export type ContentControlLocation = {
+    part: 'body';
+} | {
+    part: 'header' | 'footer';
+    rId: string;
+};
+
+// @public
 export class ContentControlLockedError extends Error {
     constructor(lock: SdtProperties['lock'], op: 'edit' | 'remove');
 }
@@ -185,6 +204,19 @@ export class ContentControlLockedError extends Error {
 export class ContentControlNotFoundError extends Error {
     constructor(filter: ContentControlFilter);
 }
+
+// @public
+export type ContentControlStep = {
+    kind: 'block';
+    index: number;
+} | {
+    kind: 'cell';
+    row: number;
+    col: number;
+} | {
+    kind: 'inline';
+    index: number;
+};
 
 // @public
 export class ContentControlTypeError extends Error {
@@ -442,10 +474,15 @@ export interface ExtendedSelectionContext extends SelectionContext {
 export function extractVariablesFromText(text: string): string[];
 
 // @public
-export function findContentControl(input: Document_2 | DocumentBody, filter: ContentControlFilter): ContentControlInfo | undefined;
+export function findContentControl(input: Document_2 | DocumentBody, filter: ContentControlFilter, options?: FindContentControlsOptions): ContentControlInfo | undefined;
 
 // @public
-export function findContentControls(input: Document_2 | DocumentBody, filter?: ContentControlFilter): ContentControlInfo[];
+export function findContentControls(input: Document_2 | DocumentBody, filter?: ContentControlFilter, options?: FindContentControlsOptions): ContentControlInfo[];
+
+// @public
+export interface FindContentControlsOptions {
+    scope?: 'body' | 'all';
+}
 
 // @public
 export interface Footnote {
@@ -519,7 +556,7 @@ export function getBodyText(body: DocumentBody): string;
 export function getBodyWordCount(body: DocumentBody): number;
 
 // @public
-export function getContentControlText(control: BlockSdt): string;
+export function getContentControlText(control: BlockSdt | InlineSdt): string;
 
 // @public
 export function getContrastingColor(backgroundColor: ColorValue | undefined | null, theme: Theme | null | undefined): string;
@@ -1141,6 +1178,7 @@ export interface Relationship {
 export function removeContentControl(doc: Document_2, filter: ContentControlFilter, options?: {
     force?: boolean;
     keepContent?: boolean;
+    scope?: 'body' | 'all';
 }): Document_2;
 
 // @public
@@ -1298,6 +1336,7 @@ export function serializeSectionProperties(props: SectionProperties | undefined)
 // @public
 export function setContentControlContent(doc: Document_2, filter: ContentControlFilter, replacement: string | BlockContent[], options?: {
     force?: boolean;
+    scope?: 'body' | 'all';
 }): Document_2;
 
 // @public

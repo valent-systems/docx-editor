@@ -131,10 +131,31 @@ const out = await repackDocx(doc);
 await writeFile("contract-acme.docx", Buffer.from(out));
 ```
 
+## Scope
+
+`findContentControls`, `findContentControl`, `setContentControlContent`, and `removeContentControl` address both **block-level** and **inline** (run-level) controls, including inline controls inside **table cells** (and nested tables). Each result carries a `kind` (`'block'` / `'inline'`), a `location` (`body` or a header/footer part by `rId`), and a structural `address` for the exact node.
+
+By default the search covers the main document story only. `scope` widens it:
+
+- `scope: 'body'` (default) — the main document body.
+- `scope: 'all'` — additionally the header and footer parts (requires a full `Document`, since a bare `DocumentBody` has no parts). `'all'` means "every part the API supports" — currently body + headers/footers; footnotes/endnotes are not searched (see [Current limits](#current-limits)).
+
+It is opt-in so existing callers' result sets don't change, and so a control with the same tag in a header doesn't shadow the body one.
+
+```ts
+findContentControls(doc, { type: 'checkbox' }, { scope: 'all' });
+setContentControlContent(doc, { tag: 'supplier' }, 'ACME Ltd', { scope: 'all' });
+```
+
+When filling an inline control, the new run inherits the placeholder's formatting, so the value matches the field it replaces.
+
+The same applies to the live-editor `DocxEditorRef` methods (`getContentControls` / `setContentControlContent` / `removeContentControl`), in both React and Vue.
+
 ## Current limits
 
-- Scope is block-level controls in the document body. Inline controls parse and round-trip but are not part of this addressing API.
-- Controls inside headers/footers and inside table cells are not discovered; `findContentControls` will not return them and mutators report "not found".
+- A block-level control _wrapping_ a whole table cell or row (`CT_SdtCell` / `CT_SdtRow`) is not modeled — the model types a cell as `(Paragraph | Table)[]`, so such a control is dropped at parse. (Inline controls _inside_ a cell are fully supported.)
+- An inline control placed directly inside a hyperlink is valid OOXML but unrepresentable in the model (`Hyperlink.children` excludes inline SDTs), so it is dropped at parse and the API cannot surface it.
+- Controls buried inside tracked-change wrappers (`w:ins` / `w:del`) are not descended.
 - `dataBinding` and repeating sections round-trip verbatim but have no live behavior (no bound-value resolution, no automatic repeat expansion).
 
 ## Next steps

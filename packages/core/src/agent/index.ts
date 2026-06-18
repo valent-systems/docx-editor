@@ -103,7 +103,7 @@ export {
   DEFAULT_AI_ACTIONS,
 } from '../types/agentApi';
 
-// Content-control (SDT) addressing — discover and edit block controls by tag.
+// Content-control (SDT) addressing — discover and edit block + inline controls by tag.
 export {
   findContentControls,
   findContentControl,
@@ -116,6 +116,10 @@ export {
   ContentControlBoundError,
   type ContentControlFilter,
   type ContentControlInfo,
+  type ContentControlLocation,
+  type ContentControlStep,
+  type ContentControlAddress,
+  type FindContentControlsOptions,
 } from './contentControls';
 export {
   setContentControlValue,
