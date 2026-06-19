@@ -49,7 +49,7 @@ next = removeContentControl(next, { tag: "optionalClause" });
 next = removeContentControl(next, { tag: "wrapper" }, { keepContent: true });
 ```
 
-All headless mutators are pure: they return a new `Document` and preserve the control's identity and raw `w:sdtPr`, so the result still round-trips. Mutators affect the first match only; when a tag repeats, enumerate with `findContentControls` and disambiguate by `id`.
+All headless mutators are pure: they return a new `Document` and preserve the control's identity and raw `w:sdtPr`, so the result still round-trips. By default mutators affect the first match; when a tag repeats, enumerate with `findContentControls` and disambiguate by `id` (or pass `{ all: true }` to act on every match).
 
 Safety rules (each overridable with `{ force: true }`):
 
