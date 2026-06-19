@@ -76,37 +76,27 @@ In the editor, typed controls also get an interactive trigger at the top-right o
 
 ## Creating controls
 
-`createContentControl` wraps existing content in a **new** control — the deterministic step that turns a tagged template region into a fillable control. It is pure (returns a new `Document`) and hands back the created control's `ContentControlInfo`:
+`createContentControl` wraps a text span in a **new** control — the step that turns a placeholder in a template into a fillable, tagged region (including inside a table cell). It is pure (returns a new `Document`) and returns the created control:
 
 ```ts
 import { createContentControl } from "@eigenpal/docx-editor-core/headless";
 
-// Inline: wrap an exact text span inside a paragraph (located by Word's w14:paraId).
-// Runs are split at the span boundaries with formatting preserved.
+// Wrap "[CUSTOMER]" in the paragraph with this Word w14:paraId.
 const { doc: d1, control } = createContentControl(
   doc,
-  { kind: "text", paraId: "0A1B2C3D", text: "[CUSTOMER]" },
+  { paraId: "0A1B2C3D", text: "[CUSTOMER]" },
   { tag: "customer", alias: "Customer", sdtType: "plainText" }
 );
 
-// A typed control is created ready to fill — set its structured value afterwards.
+// Typed controls are created ready to fill — set the value afterwards.
 const { doc: d2 } = createContentControl(
   doc,
-  { kind: "text", paraId: "0A1B2C3D", text: "[DATE]" },
+  { paraId: "0A1B2C3D", text: "[DATE]" },
   { tag: "effective", sdtType: "date", dateFormat: "MMMM d, yyyy" }
-);
-
-// Block: wrap a contiguous range of paragraphs/tables in a block-level control.
-const { doc: d3 } = createContentControl(
-  doc,
-  { kind: "blocks", from: blockAddress, to: blockAddress2 },
-  { tag: "section", alias: "Optional section" }
 );
 ```
 
-The control's `w:sdtPr` is synthesized from `props` with a Word-correct element order, and its `w:id` is auto-assigned unique across the document (pass `props.id` to set it yourself). A created control round-trips immediately, so `findContentControl(doc, { tag })` resolves it and a typed control accepts `setContentControlValue`.
-
-Inline text wrapping is the form needed inside table cells and mid-sentence, where block controls aren't allowed. It throws `ContentControlCreateError` when the text/occurrence isn't found, the span overlaps an existing control or crosses a non-run boundary (a hyperlink or field), or a block target resolves inside a table cell (use `{ kind: 'text' }` there instead).
+The `w:id` is auto-assigned (pass `props.id` to set it yourself), and the result round-trips immediately, so `findContentControl(doc, { tag })` resolves it and a typed control accepts `setContentControlValue`. `createContentControl` throws `ContentControlCreateError` if the text isn't found or the span can't be cleanly wrapped (for example, it overlaps an existing control).
 
 ## Repeating sections
 
@@ -167,30 +157,23 @@ await writeFile("contract-acme.docx", Buffer.from(out));
 
 ## Scope
 
-`findContentControls`, `findContentControl`, `setContentControlContent`, `setContentControlValue`, and `removeContentControl` address both **block-level** and **inline** (run-level) controls, including inline controls inside **table cells** (and nested tables), and `createContentControl` likewise creates either kind. Each result carries a `kind` (`'block'` / `'inline'`), a `location` (`body` or a header/footer part by `rId`), and a structural `address` for the exact node.
-
-By default the search covers the main document story only. `scope` widens it:
-
-- `scope: 'body'` (default) — the main document body.
-- `scope: 'all'` — additionally the header and footer parts (requires a full `Document`, since a bare `DocumentBody` has no parts). `'all'` means "every part the API supports" — currently body + headers/footers; footnotes/endnotes are not searched (see [Current limits](#current-limits)).
-
-It is opt-in so existing callers' result sets don't change, and so a control with the same tag in a header doesn't shadow the body one.
+By default the API searches the main document body. Pass `scope: 'all'` to also search headers and footers:
 
 ```ts
 findContentControls(doc, { type: 'checkbox' }, { scope: 'all' });
 setContentControlContent(doc, { tag: 'supplier' }, 'ACME Ltd', { scope: 'all' });
 ```
 
-When filling an inline control, the new run inherits the placeholder's formatting, so the value matches the field it replaces.
+`scope: 'all'` needs a full `Document` (a bare `DocumentBody` has no header/footer parts), and a result's `location` tells you which part it lives in. When filling a control, the value inherits the surrounding formatting so it matches the text it replaces.
 
-The live-editor `DocxEditorRef` methods (`getContentControls` / `setContentControlContent` / `removeContentControl`) reach block and inline controls too, in both React and Vue — but the body only. They take no `scope` option, so header/footer controls are addressable headless only.
+The live-editor `DocxEditorRef` methods (`getContentControls` / `setContentControlContent` / `removeContentControl`) cover the body only — they take no `scope`, so header and footer controls are addressable from the headless API.
 
 ## Current limits
 
-- A block-level control _wrapping_ a whole table cell or row (`CT_SdtCell` / `CT_SdtRow`) is not modeled — the model types a cell as `(Paragraph | Table)[]`, so such a control is dropped at parse. (Inline controls _inside_ a cell are fully supported.)
-- An inline control placed directly inside a hyperlink is valid OOXML but unrepresentable in the model (`Hyperlink.children` excludes inline SDTs), so it is dropped at parse and the API cannot surface it.
-- Controls buried inside tracked-change wrappers (`w:ins` / `w:del`) are not descended.
-- `dataBinding` and repeating sections round-trip verbatim but have no live behavior (no bound-value resolution, no automatic repeat expansion).
+- A control that _wraps_ a whole table cell or row isn't supported (inline controls _inside_ a cell are).
+- A control inside a hyperlink isn't surfaced.
+- Controls inside tracked changes, footnotes, and endnotes are not searched.
+- `dataBinding` and repeating sections round-trip but have no live behavior (no bound-value resolution, no automatic repeat expansion).
 
 ## Next steps
 

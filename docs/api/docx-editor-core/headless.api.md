@@ -143,14 +143,6 @@ export interface CommentRangeStart {
 export function comparePositions(a: Position_2, b: Position_2): -1 | 0 | 1;
 
 // @public
-export interface ContentControlAddress {
-    // (undocumented)
-    location: ContentControlLocation;
-    // (undocumented)
-    steps: ContentControlStep[];
-}
-
-// @public
 export class ContentControlBoundError extends Error {
     constructor();
 }
@@ -170,7 +162,6 @@ export interface ContentControlFilter {
 
 // @public
 export interface ContentControlInfo {
-    address: ContentControlAddress;
     alias?: string;
     checked?: boolean;
     dataBinding?: SdtDataBinding;
@@ -214,19 +205,6 @@ export class ContentControlLockedError extends Error {
 export class ContentControlNotFoundError extends Error {
     constructor(filter: ContentControlFilter);
 }
-
-// @public
-export type ContentControlStep = {
-    kind: 'block';
-    index: number;
-} | {
-    kind: 'cell';
-    row: number;
-    col: number;
-} | {
-    kind: 'inline';
-    index: number;
-};
 
 // @public
 export class ContentControlTypeError extends Error {
@@ -290,25 +268,17 @@ export function createCollapsedRange(position: Position_2): Range_2;
 export function createCommand<T extends AgentCommand>(command: Omit<T, 'id'>): T;
 
 // @public
-export function createContentControl(doc: Document_2, target: CreateContentControlTarget, props?: NewContentControlProps, options?: {
-    force?: boolean;
-}): {
+export function createContentControl(doc: Document_2, target: CreateContentControlTarget, props?: NewContentControlProps): {
     doc: Document_2;
     control: ContentControlInfo;
 };
 
 // @public
-export type CreateContentControlTarget = {
-    kind: 'text';
-    paraId?: string;
-    paragraph?: ContentControlAddress;
-    text: string;
+export interface CreateContentControlTarget {
     occurrence?: number;
-} | {
-    kind: 'blocks';
-    from: ContentControlAddress;
-    to?: ContentControlAddress;
-};
+    paraId: string;
+    text: string;
+}
 
 // @public
 export function createDocumentWithText(text: string, options?: Omit<CreateEmptyDocumentOptions, 'initialText'>): Document_2;

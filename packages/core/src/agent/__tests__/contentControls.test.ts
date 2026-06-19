@@ -308,7 +308,7 @@ const mkBodyDoc = (content: any[]): Document =>
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 describe('inline content controls — discovery', () => {
-  test('finds an inline control in a body paragraph with kind/location/address/text', () => {
+  test('finds an inline control in a body paragraph with kind/location/text', () => {
     const doc = mkBodyDoc([
       mkPara(mkRun('Dear '), mkInlineSdt('supplier-name', 'ACME Ltd'), mkRun('.')),
     ]);
@@ -318,14 +318,10 @@ describe('inline content controls — discovery', () => {
     expect(c.location).toEqual({ part: 'body' });
     expect(c.text).toBe('ACME Ltd');
     expect(c.depth).toBe(0);
-    expect(c.address.steps).toEqual([
-      { kind: 'block', index: 0 },
-      { kind: 'inline', index: 1 }, // after the "Dear " run
-    ]);
-    expect(c.path).toEqual([0]); // best-effort block path = nearest enclosing block
+    expect(c.path).toEqual([0]); // block path of the enclosing paragraph
   });
 
-  test('finds an inline control inside a table cell (row-major address)', () => {
+  test('finds an inline control inside a table cell', () => {
     const doc = mkBodyDoc([
       mkPara(mkRun('lead')),
       {
@@ -343,16 +339,12 @@ describe('inline content controls — discovery', () => {
     ]);
     const c = findContentControl(doc, { tag: 'start-date' })!;
     expect(c.kind).toBe('inline');
-    expect(c.address.steps).toEqual([
-      { kind: 'block', index: 1 },
-      { kind: 'cell', row: 0, col: 1 },
-      { kind: 'block', index: 0 },
-      { kind: 'inline', index: 0 },
-    ]);
+    expect(c.location).toEqual({ part: 'body' });
+    expect(c.path).toEqual([1, 0]); // table at body index 1, paragraph 0 in the cell
     expect(c.text).toBe('2026-01-01');
   });
 
-  test('finds an inline control inside a nested table (two cell steps)', () => {
+  test('finds an inline control inside a nested table', () => {
     const inner = {
       type: 'table',
       rows: [
@@ -369,7 +361,8 @@ describe('inline content controls — discovery', () => {
       },
     ]);
     const c = findContentControl(doc, { tag: 'deep' })!;
-    expect(c.address.steps.filter((s) => s.kind === 'cell')).toHaveLength(2);
+    expect(c.kind).toBe('inline');
+    expect(c.path).toEqual([0, 0, 0]); // outer table → inner table → paragraph
     expect(c.text).toBe('D');
   });
 

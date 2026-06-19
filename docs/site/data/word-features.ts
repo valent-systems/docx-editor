@@ -538,7 +538,7 @@ export const wordFeatures: WordFeature[] = [
     roundTrip: 'full',
     tier: 'community',
     notes:
-      'Block and inline controls are addressable by tag/id/alias from the headless API and the live editor — discover, create (wrap a text span or block range), fill, and remove — including inline controls inside table cells; headers/footers via { scope: "all" }.',
+      'Discover, create, fill, and remove by tag/id/alias from the headless API and the live editor, including controls inside table cells; headers and footers via the headless API.',
     docsLink: '/docs/1.x/guides/content-controls',
   },
   {

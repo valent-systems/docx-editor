@@ -10,9 +10,7 @@
  * Both **block-level** (`w:sdt` wrapping paragraphs/tables) and **inline**
  * (`w:sdt` inside a paragraph) controls are addressed, including inline
  * controls inside table cells (and nested tables). With `{ scope: 'all' }` the
- * walk also covers header/footer parts. Each {@link ContentControlInfo} carries
- * a `kind`, a `location`, and a structural `address` (the replayable coordinate
- * the mutators re-walk); the legacy `path` is retained for body block controls.
+ * walk also covers header/footer parts.
  *
  * Not surfaced (model limitations): a block SDT placed directly inside a table
  * cell (`TableCell.content` cannot hold one), an inline SDT inside a hyperlink
@@ -56,27 +54,6 @@ export interface ContentControlFilter {
  */
 export type ContentControlLocation = { part: 'body' } | { part: 'header' | 'footer'; rId: string };
 
-/**
- * One step from a part root toward a control, in document order: an index into
- * a `BlockContent[]`, a row-major cell coordinate (then continue into the
- * cell's content), or an index into a paragraph's / inline SDT's inline content.
- */
-export type ContentControlStep =
-  | { kind: 'block'; index: number }
-  | { kind: 'cell'; row: number; col: number }
-  | { kind: 'inline'; index: number };
-
-/**
- * A self-contained, replayable coordinate for one control: the part it lives in
- * plus ordered steps that each narrow one container level. Structural (indices,
- * not identities), so it stays valid across the pure-function rebuilds the
- * mutators perform.
- */
-export interface ContentControlAddress {
-  location: ContentControlLocation;
-  steps: ContentControlStep[];
-}
-
 /** A discovered content control plus enough context to address and edit it. */
 export interface ContentControlInfo {
   /** Developer identifier (`w:tag`). */
@@ -104,11 +81,9 @@ export interface ContentControlInfo {
   /** Plain text of the control's content (paragraphs/tables/nested controls flattened). */
   text: string;
   /**
-   * Block-index path to this control. For a body block-level control this is
-   * the legacy contract: top-level `[i]`, a control nested in the i-th block's
-   * content `[i, j]`, and so on. For inline / cell / header-footer controls it
-   * is best-effort — the block indices of the nearest enclosing blocks; use
-   * {@link ContentControlInfo.address} for the exact, replayable coordinate.
+   * Block-index path to this control: top-level `[i]`, a control nested in the
+   * i-th block's content `[i, j]`, and so on. For inline / cell controls it is
+   * the block indices of the nearest enclosing blocks.
    */
   path: number[];
   /** Nesting depth = number of enclosing content controls (0 = not inside another control). */
@@ -117,8 +92,6 @@ export interface ContentControlInfo {
   kind: 'block' | 'inline';
   /** Where the control lives (body vs a header/footer part). */
   location: ContentControlLocation;
-  /** Full structural coordinate for a follow-up mutation; superset of {@link ContentControlInfo.path}. */
-  address: ContentControlAddress;
 }
 
 /** Narrow a {@link Document} or {@link DocumentBody} to its block list. */
@@ -188,8 +161,9 @@ function matches(props: SdtProperties, filter: ContentControlFilter): boolean {
 
 function infoOf(
   control: BlockSdt | InlineSdt,
-  address: ContentControlAddress,
-  depth: number
+  path: number[],
+  depth: number,
+  location: ContentControlLocation
 ): ContentControlInfo {
   const p = control.properties;
   return {
@@ -205,14 +179,10 @@ function infoOf(
     dateFormat: p.dateFormat,
     dataBinding: p.dataBinding,
     text: getContentControlText(control),
-    // Legacy `path` = the block-index portion of the address (the nearest
-    // enclosing blocks). For a body block control this reproduces the old
-    // value exactly; `address` carries the full coordinate.
-    path: address.steps.flatMap((s) => (s.kind === 'block' ? [s.index] : [])),
+    path,
     depth,
     kind: control.type === 'inlineSdt' ? 'inline' : 'block',
-    location: address.location,
-    address,
+    location,
   };
 }
 
@@ -251,19 +221,18 @@ export function findContentControls(
   const out: ContentControlInfo[] = [];
 
   // Descend a paragraph's (or inline SDT's) inline content for inline SDTs.
-  // `depth` counts enclosing content controls.
+  // `path` is the block-index path of the enclosing paragraph; `depth` counts
+  // enclosing content controls.
   const walkInline = (
     content: Paragraph['content'],
     location: ContentControlLocation,
-    baseSteps: ContentControlStep[],
+    path: number[],
     depth: number
   ): void => {
-    for (let j = 0; j < content.length; j++) {
-      const node = content[j];
+    for (const node of content) {
       if (node.type === 'inlineSdt') {
-        const steps: ContentControlStep[] = [...baseSteps, { kind: 'inline', index: j }];
-        if (matches(node.properties, filter)) out.push(infoOf(node, { location, steps }, depth));
-        walkInline(node.content, location, steps, depth + 1); // nested inline controls
+        if (matches(node.properties, filter)) out.push(infoOf(node, path, depth, location));
+        walkInline(node.content, location, path, depth + 1); // nested inline controls
       }
       // Hyperlink children are runs only (no SDT possible per the model);
       // tracked-change wrappers are not descended in v1.
@@ -275,29 +244,23 @@ export function findContentControls(
   const walkBlocks = (
     blocks: BlockContent[],
     location: ContentControlLocation,
-    baseSteps: ContentControlStep[],
+    path: number[],
     depth: number
   ): void => {
     for (let i = 0; i < blocks.length; i++) {
       const block = blocks[i];
+      const blockPath = [...path, i];
       if (block.type === 'blockSdt') {
-        const steps: ContentControlStep[] = [...baseSteps, { kind: 'block', index: i }];
-        if (matches(block.properties, filter)) out.push(infoOf(block, { location, steps }, depth));
-        walkBlocks(block.content, location, steps, depth + 1); // nested controls
+        if (matches(block.properties, filter)) out.push(infoOf(block, blockPath, depth, location));
+        walkBlocks(block.content, location, blockPath, depth + 1); // nested controls
       } else if (block.type === 'table') {
-        for (let r = 0; r < block.rows.length; r++) {
-          const row = block.rows[r];
-          for (let c = 0; c < row.cells.length; c++) {
-            const cellSteps: ContentControlStep[] = [
-              ...baseSteps,
-              { kind: 'block', index: i },
-              { kind: 'cell', row: r, col: c },
-            ];
-            walkBlocks(row.cells[c].content, location, cellSteps, depth);
+        for (const row of block.rows) {
+          for (const cell of row.cells) {
+            walkBlocks(cell.content, location, blockPath, depth);
           }
         }
       } else if (block.type === 'paragraph') {
-        walkInline(block.content, location, [...baseSteps, { kind: 'block', index: i }], depth);
+        walkInline(block.content, location, blockPath, depth);
       }
     }
   };

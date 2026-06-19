@@ -1,20 +1,14 @@
 /**
- * createContentControl — wrap existing content in a new content control.
+ * createContentControl — wrap a text span in a new content control.
  *
- * Inline (text-span) wrapping is the must-have: it splits runs at the span
- * boundaries, preserves formatting, includes interior fields/tabs wholesale,
- * and errors on overlap / a boundary inside a non-run item. Block wrapping is
- * the symmetric addition and rejects table-cell targets.
+ * It splits runs at the span boundaries, preserves formatting, includes interior
+ * fields/tabs wholesale, and errors on overlap / a boundary inside a non-run item.
  */
 
 import { describe, expect, test } from 'bun:test';
 
 import { createContentControl, ContentControlCreateError } from '../createContentControl';
-import {
-  findContentControl,
-  findContentControls,
-  type ContentControlAddress,
-} from '../contentControls';
+import { findContentControl, findContentControls } from '../contentControls';
 import { setContentControlValue } from '../contentControlValues';
 import { getParagraphText } from '../text-utils';
 import { parseDocx } from '../../docx/parser';
@@ -35,10 +29,6 @@ const mkPara = (paraId: string | undefined, ...content: any[]): any => ({
 const mkBodyDoc = (content: any[]): Document =>
   ({ package: { document: { content } } }) as unknown as Document;
 const bodyBlocks = (doc: Document): any[] => doc.package.document.content as any[];
-const blockAddr = (...index: number[]): ContentControlAddress => ({
-  location: { part: 'body' },
-  steps: index.map((i) => ({ kind: 'block', index: i })),
-});
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 describe('createContentControl — inline text wrap', () => {
@@ -46,7 +36,7 @@ describe('createContentControl — inline text wrap', () => {
     const doc = mkBodyDoc([mkPara('P1', mkRun('Dear '), mkRun('CLIENT'), mkRun(' party'))]);
     const { doc: next, control } = createContentControl(
       doc,
-      { kind: 'text', paraId: 'P1', text: 'CLIENT' },
+      { paraId: 'P1', text: 'CLIENT' },
       { tag: 'client', alias: 'Client' }
     );
 
@@ -76,7 +66,7 @@ describe('createContentControl — inline text wrap', () => {
     ]);
     const { doc: next } = createContentControl(
       doc,
-      { kind: 'text', paraId: 'P', text: 'brave new' },
+      { paraId: 'P', text: 'brave new' },
       { tag: 'span' }
     );
     expect(findContentControl(next, { tag: 'span' })!.text).toBe('brave new');
@@ -108,7 +98,7 @@ describe('createContentControl — inline text wrap', () => {
     ]);
     const { doc: next, control } = createContentControl(
       doc,
-      { kind: 'text', paraId: 'P', text: 'AAABBB' },
+      { paraId: 'P', text: 'AAABBB' },
       { tag: 'f' }
     );
     // the control spans AAA + <field> + BBB; its text flattens the field result.
@@ -117,7 +107,7 @@ describe('createContentControl — inline text wrap', () => {
     expect(sdt.content.map((n: { type: string }) => n.type)).toEqual(['run', 'simpleField', 'run']);
   });
 
-  test('wraps a span inside a table cell (inline; address carries a cell step)', () => {
+  test('wraps a span inside a table cell, located by paraId', () => {
     const doc = mkBodyDoc([
       {
         type: 'table',
@@ -133,68 +123,18 @@ describe('createContentControl — inline text wrap', () => {
     ]);
     const { doc: next, control } = createContentControl(
       doc,
-      { kind: 'text', paraId: 'L', text: '[VALUE]' },
+      { paraId: 'L', text: '[VALUE]' },
       { tag: 'amt', sdtType: 'plainText' }
     );
     expect(control.kind).toBe('inline');
-    expect(control.address.steps.some((s) => s.kind === 'cell')).toBe(true);
     expect(findContentControl(next, { tag: 'amt' })!.text).toBe('[VALUE]');
-  });
-
-  test('wraps a span located by structural paragraph address', () => {
-    const doc = mkBodyDoc([
-      mkPara(undefined, mkRun('skip')),
-      mkPara(undefined, mkRun('wrap ME here')),
-    ]);
-    const { doc: next } = createContentControl(
-      doc,
-      { kind: 'text', paragraph: blockAddr(1), text: 'ME' },
-      { tag: 'm' }
-    );
-    expect(findContentControl(next, { tag: 'm' })!.text).toBe('ME');
-  });
-
-  test('resolves a structural paragraph address that descends through a table cell', () => {
-    const doc = mkBodyDoc([
-      mkPara(undefined, mkRun('intro')),
-      {
-        type: 'table',
-        rows: [
-          {
-            type: 'tableRow',
-            cells: [
-              { type: 'tableCell', content: [mkPara(undefined, mkRun('label'))] },
-              { type: 'tableCell', content: [mkPara(undefined, mkRun('wrap ME here'))] },
-            ],
-          },
-        ],
-      },
-    ]);
-    // body block 1 (table) → cell (0,1) → block 0 (paragraph) — the shape
-    // findContentControls emits for a cell paragraph.
-    const paragraph: ContentControlAddress = {
-      location: { part: 'body' },
-      steps: [
-        { kind: 'block', index: 1 },
-        { kind: 'cell', row: 0, col: 1 },
-        { kind: 'block', index: 0 },
-      ],
-    };
-    const { doc: next, control } = createContentControl(
-      doc,
-      { kind: 'text', paragraph, text: 'ME' },
-      { tag: 'cell-span' }
-    );
-    expect(control.kind).toBe('inline');
-    expect(control.address.steps.some((s) => s.kind === 'cell')).toBe(true);
-    expect(findContentControl(next, { tag: 'cell-span' })!.text).toBe('ME');
   });
 
   test('selects the requested occurrence when the text repeats', () => {
     const doc = mkBodyDoc([mkPara('P', mkRun('x [Y] z [Y] w'))]);
     const { doc: next } = createContentControl(
       doc,
-      { kind: 'text', paraId: 'P', text: '[Y]', occurrence: 2 },
+      { paraId: 'P', text: '[Y]', occurrence: 2 },
       { tag: 'y2' }
     );
     const para = bodyBlocks(next)[0];
@@ -206,7 +146,7 @@ describe('createContentControl — inline text wrap', () => {
 
   test('is pure — the input document is not mutated', () => {
     const doc = mkBodyDoc([mkPara('P', mkRun('Dear CLIENT'))]);
-    createContentControl(doc, { kind: 'text', paraId: 'P', text: 'CLIENT' }, { tag: 'c' });
+    createContentControl(doc, { paraId: 'P', text: 'CLIENT' }, { tag: 'c' });
     const para = bodyBlocks(doc)[0];
     expect(para.content).toHaveLength(1); // still a single run, no sdt spliced in
     expect(getParagraphText(para)).toBe('Dear CLIENT');
@@ -221,7 +161,7 @@ describe('createContentControl — inline text wrap', () => {
     const doc = mkBodyDoc([mkPara('P', existing, mkRun(' and NEW'))]);
     const { control } = createContentControl(
       doc,
-      { kind: 'text', paraId: 'P', text: 'NEW' },
+      { paraId: 'P', text: 'NEW' },
       {
         tag: 'new',
       }
@@ -234,26 +174,26 @@ describe('createContentControl — errors', () => {
   const doc = () => mkBodyDoc([mkPara('P', mkRun('ab ab cd'))]);
 
   test('throws when the text is not found', () => {
-    expect(() =>
-      createContentControl(doc(), { kind: 'text', paraId: 'P', text: 'ZZZ' }, {})
-    ).toThrow(ContentControlCreateError);
+    expect(() => createContentControl(doc(), { paraId: 'P', text: 'ZZZ' }, {})).toThrow(
+      ContentControlCreateError
+    );
   });
 
   test('throws when the requested occurrence does not exist', () => {
     expect(() =>
-      createContentControl(doc(), { kind: 'text', paraId: 'P', text: 'ab', occurrence: 3 }, {})
+      createContentControl(doc(), { paraId: 'P', text: 'ab', occurrence: 3 }, {})
     ).toThrow(ContentControlCreateError);
   });
 
   test('throws when the paraId is not found', () => {
-    expect(() =>
-      createContentControl(doc(), { kind: 'text', paraId: 'NOPE', text: 'ab' }, {})
-    ).toThrow(ContentControlCreateError);
+    expect(() => createContentControl(doc(), { paraId: 'NOPE', text: 'ab' }, {})).toThrow(
+      ContentControlCreateError
+    );
   });
 
   test('rejects an sdtType that cannot be synthesized (would lose its type on round-trip)', () => {
     expect(() =>
-      createContentControl(doc(), { kind: 'text', paraId: 'P', text: 'ab' }, { sdtType: 'group' })
+      createContentControl(doc(), { paraId: 'P', text: 'ab' }, { sdtType: 'group' })
     ).toThrow(ContentControlCreateError);
   });
 
@@ -266,25 +206,25 @@ describe('createContentControl — errors', () => {
     // getParagraphText ignores the control's own text → "Hello  world" (two spaces).
     const d = mkBodyDoc([mkPara('P', mkRun('Hello '), existing, mkRun(' world'))]);
     expect(() =>
-      createContentControl(d, { kind: 'text', paraId: 'P', text: 'Hello  world' }, { tag: 'over' })
+      createContentControl(d, { paraId: 'P', text: 'Hello  world' }, { tag: 'over' })
     ).toThrow(ContentControlCreateError);
   });
 
   test('throws when a boundary falls inside a hyperlink', () => {
     const link = { type: 'hyperlink', href: 'https://x', children: [mkRun('LINK')] };
     const d = mkBodyDoc([mkPara('P', mkRun('see '), link, mkRun(' here'))]);
-    expect(() =>
-      createContentControl(d, { kind: 'text', paraId: 'P', text: 'LIN' }, { tag: 'b' })
-    ).toThrow(ContentControlCreateError);
+    expect(() => createContentControl(d, { paraId: 'P', text: 'LIN' }, { tag: 'b' })).toThrow(
+      ContentControlCreateError
+    );
   });
 
   test('throws when the span encloses content that cannot live inside an inline control', () => {
     // A bookmark cannot sit inside an inline SDT; a span that swallows one is rejected.
     const bookmark = { type: 'bookmarkStart', id: 1, name: 'bm' };
     const d = mkBodyDoc([mkPara('P', mkRun('a '), mkRun('XY'), bookmark, mkRun('Z'), mkRun(' b'))]);
-    expect(() =>
-      createContentControl(d, { kind: 'text', paraId: 'P', text: 'XYZ' }, { tag: 'bm' })
-    ).toThrow(ContentControlCreateError);
+    expect(() => createContentControl(d, { paraId: 'P', text: 'XYZ' }, { tag: 'bm' })).toThrow(
+      ContentControlCreateError
+    );
   });
 
   test('rejects a caller-supplied id that collides with an existing control', () => {
@@ -295,104 +235,7 @@ describe('createContentControl — errors', () => {
     };
     const d = mkBodyDoc([mkPara('P', existing, mkRun(' NEW'))]);
     expect(() =>
-      createContentControl(d, { kind: 'text', paraId: 'P', text: 'NEW' }, { tag: 'n', id: 7 })
-    ).toThrow(ContentControlCreateError);
-  });
-
-  test('with { force: true } a colliding id is auto-reassigned and the new control is returned', () => {
-    const existing = {
-      type: 'inlineSdt',
-      properties: { sdtType: 'richText', tag: 'old', id: 7 },
-      content: [mkRun('OLD')],
-    };
-    const d = mkBodyDoc([mkPara('P', existing, mkRun(' NEW'))]);
-    const { doc: next, control } = createContentControl(
-      d,
-      { kind: 'text', paraId: 'P', text: 'NEW' },
-      { tag: 'n', id: 7 },
-      { force: true }
-    );
-    // the returned info is the NEW control (tag 'n'), not the pre-existing id-7 one
-    expect(control.tag).toBe('n');
-    expect(control.id).not.toBe(7); // reassigned to a fresh unique id
-    expect(control.text).toBe('NEW');
-    // both controls coexist, each resolvable by its own tag
-    expect(findContentControl(next, { tag: 'old' })!.text).toBe('OLD');
-    expect(findContentControl(next, { tag: 'n' })!.text).toBe('NEW');
-  });
-});
-
-describe('createContentControl — block wrap', () => {
-  test('wraps a contiguous block range in a block control', () => {
-    const doc = mkBodyDoc([
-      mkPara(undefined, mkRun('A')),
-      mkPara(undefined, mkRun('B')),
-      mkPara(undefined, mkRun('C')),
-    ]);
-    const { doc: next, control } = createContentControl(
-      doc,
-      { kind: 'blocks', from: blockAddr(0), to: blockAddr(1) },
-      { tag: 'sec', alias: 'Section' }
-    );
-    expect(control.kind).toBe('block');
-    expect(control.text).toBe('A\nB');
-
-    const blocks = bodyBlocks(next);
-    expect(blocks).toHaveLength(2);
-    expect(blocks[0].type).toBe('blockSdt');
-    expect(blocks[1].type).toBe('paragraph'); // "C" untouched
-    expect(findContentControl(next, { tag: 'sec' })!.text).toBe('A\nB');
-  });
-
-  test('wraps a single block when `to` is omitted', () => {
-    const doc = mkBodyDoc([mkPara(undefined, mkRun('only'))]);
-    const { control } = createContentControl(
-      doc,
-      { kind: 'blocks', from: blockAddr(0) },
-      {
-        tag: 's',
-      }
-    );
-    expect(control.kind).toBe('block');
-    expect(control.text).toBe('only');
-  });
-
-  test('rejects a block target inside a table cell with a clear error', () => {
-    const doc = mkBodyDoc([
-      {
-        type: 'table',
-        rows: [
-          {
-            type: 'tableRow',
-            cells: [{ type: 'tableCell', content: [mkPara(undefined, mkRun('cell'))] }],
-          },
-        ],
-      },
-    ]);
-    const cellFrom: ContentControlAddress = {
-      location: { part: 'body' },
-      steps: [
-        { kind: 'block', index: 0 },
-        { kind: 'cell', row: 0, col: 0 },
-        { kind: 'block', index: 0 },
-      ],
-    };
-    expect(() =>
-      createContentControl(doc, { kind: 'blocks', from: cellFrom }, { tag: 'x' })
-    ).toThrow(ContentControlCreateError);
-  });
-
-  test('rejects a range that crosses container boundaries', () => {
-    const doc = mkBodyDoc([mkPara(undefined, mkRun('A')), mkPara(undefined, mkRun('B'))]);
-    const nestedTo: ContentControlAddress = {
-      location: { part: 'body' },
-      steps: [
-        { kind: 'block', index: 0 },
-        { kind: 'block', index: 0 },
-      ],
-    };
-    expect(() =>
-      createContentControl(doc, { kind: 'blocks', from: blockAddr(0), to: nestedTo }, {})
+      createContentControl(d, { paraId: 'P', text: 'NEW' }, { tag: 'n', id: 7 })
     ).toThrow(ContentControlCreateError);
   });
 });
@@ -402,7 +245,7 @@ describe('createContentControl — sdtPr synthesis + round-trip', () => {
     const doc = mkBodyDoc([mkPara('P', mkRun('Date: '), mkRun('[DATE]'))]);
     const { doc: created } = createContentControl(
       doc,
-      { kind: 'text', paraId: 'P', text: '[DATE]' },
+      { paraId: 'P', text: '[DATE]' },
       { tag: 'eff', sdtType: 'date', dateFormat: 'MMMM d, yyyy' }
     );
     const sdt = bodyBlocks(created)[0].content.find(
@@ -418,7 +261,7 @@ describe('createContentControl — sdtPr synthesis + round-trip', () => {
     const doc = mkBodyDoc([mkPara('P', mkRun('Agree: '), mkRun('[ ]'))]);
     const { doc: created } = createContentControl(
       doc,
-      { kind: 'text', paraId: 'P', text: '[ ]' },
+      { paraId: 'P', text: '[ ]' },
       { tag: 'agree', sdtType: 'checkbox', checked: false }
     );
     const sdt = bodyBlocks(created)[0].content.find(
@@ -450,7 +293,7 @@ describe('createContentControl — sdtPr synthesis + round-trip', () => {
     const doc = mkBodyDoc([mkPara('P', mkRun('Hello '), mkRun('NAME'), mkRun('!'))]);
     const { doc: created } = createContentControl(
       doc,
-      { kind: 'text', paraId: 'P', text: 'NAME' },
+      { paraId: 'P', text: 'NAME' },
       { tag: 'who', alias: 'Who', sdtType: 'richText' }
     );
     const reparsed = await parseDocx(await createDocx(created));
@@ -466,7 +309,7 @@ describe('createContentControl — sdtPr synthesis + round-trip', () => {
     const doc = mkBodyDoc([mkPara('P', mkRun('Effective: '), mkRun('[DATE]'))]);
     const { doc: created } = createContentControl(
       doc,
-      { kind: 'text', paraId: 'P', text: '[DATE]' },
+      { paraId: 'P', text: '[DATE]' },
       { tag: 'eff', sdtType: 'date', dateFormat: 'MMMM d, yyyy' }
     );
     // format survives the round trip (proves the date-bug fix end to end)
@@ -488,7 +331,7 @@ describe('createContentControl — sdtPr synthesis + round-trip', () => {
     const doc = mkBodyDoc([mkPara('P', mkRun('Type: '), mkRun('[CHOICE]'))]);
     const { doc: created } = createContentControl(
       doc,
-      { kind: 'text', paraId: 'P', text: '[CHOICE]' },
+      { paraId: 'P', text: '[CHOICE]' },
       {
         tag: 'choice',
         sdtType: 'dropDownList',

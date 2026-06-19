@@ -1,16 +1,15 @@
 /**
- * Create a new content control (`w:sdt`) by wrapping existing content.
+ * Create a new inline content control (`w:sdt`) by wrapping a text span.
  *
  * Complements the discovery/edit functions in {@link ./contentControls}: where
- * those find and mutate *existing* controls, this wraps a text span (inline) or
- * a contiguous block range (block-level) in a *new* control with a synthesized,
- * Word-correct `w:sdtPr`. Pure — the input {@link Document} is not mutated.
+ * those find and mutate existing controls, this wraps an exact run of text
+ * inside a paragraph in a new control with a synthesized, Word-correct
+ * `w:sdtPr`. Pure — the input {@link Document} is not mutated.
  */
 
 import type {
   Document,
   BlockContent,
-  BlockSdt,
   InlineSdt,
   Paragraph,
   Run,
@@ -26,8 +25,6 @@ import {
   findContentControls,
   isInlineContent,
   type ContentControlInfo,
-  type ContentControlAddress,
-  type ContentControlStep,
 } from './contentControls';
 
 /** A create request failed: the target couldn't be resolved, or the wrap is invalid. */
@@ -39,41 +36,19 @@ export class ContentControlCreateError extends Error {
 }
 
 /**
- * Where to place a new content control.
- *
- * - `text` — wrap an exact text span **inside a paragraph** (an inline control).
- *   Locate the paragraph by Word `w14:paraId` (`paraId`) or by a structural
- *   {@link ContentControlAddress} (`paragraph`, as returned by
- *   {@link findContentControls}); then wrap the chosen `occurrence` of `text`
- *   (matched against {@link getParagraphText getParagraphText(para)}).
- * - `blocks` — wrap a contiguous run of block-level content (paragraphs/tables)
- *   from `from` through `to` (inclusive; `to` defaults to `from`) in a
- *   block-level control. Both addresses must share the same container and must
- *   not resolve inside a table cell (the model can't hold a block SDT there —
- *   use `kind: 'text'`).
- *
- * Targets resolve within the **body** story; header/footer create is not
- * supported (throws).
+ * Where to create a control: an exact text span inside a paragraph. The
+ * paragraph is located by Word `w14:paraId`, and the chosen `occurrence` of
+ * `text` is wrapped in an inline control — including inside a table cell, where
+ * block-level controls aren't allowed.
  */
-export type CreateContentControlTarget =
-  | {
-      kind: 'text';
-      /** Locate the paragraph by Word `w14:paraId`. */
-      paraId?: string;
-      /** Locate the paragraph by a structural address (alternative to `paraId`). */
-      paragraph?: ContentControlAddress;
-      /** Exact substring to wrap, matched against `getParagraphText(para)`. */
-      text: string;
-      /** Which occurrence of `text` to wrap when it repeats (1-based; default 1). */
-      occurrence?: number;
-    }
-  | {
-      kind: 'blocks';
-      /** First block to wrap (a block-level structural address). */
-      from: ContentControlAddress;
-      /** Last block to wrap, inclusive (defaults to `from` — wrap a single block). */
-      to?: ContentControlAddress;
-    };
+export interface CreateContentControlTarget {
+  /** Word `w14:paraId` of the paragraph containing the text. */
+  paraId: string;
+  /** Exact substring to wrap. */
+  text: string;
+  /** Which occurrence of `text` to wrap when it repeats (1-based; default 1). */
+  occurrence?: number;
+}
 
 /** Modeled properties for a control created by {@link createContentControl}. */
 export interface NewContentControlProps {
@@ -152,8 +127,7 @@ function splitRunAtChar(run: Run, n: number): [Run, Run] {
  *
  * Throws {@link ContentControlCreateError} if a boundary falls inside a non-run
  * item (hyperlink/field), if the range overlaps an existing inline control, or
- * if the range contains content that cannot live inside an inline control
- * (bookmarks, comment ranges, tracked-change wrappers).
+ * if the range contains content that cannot live inside an inline control.
  */
 function wrapInlineSpan(
   content: Paragraph['content'],
@@ -324,50 +298,28 @@ function mapFirstParagraph(
   return changed ? out : blocks;
 }
 
-/** Navigate a body structural address to the paragraph it resolves to (or throw). */
-function paragraphAtAddress(doc: Document, address: ContentControlAddress): Paragraph {
-  if (address.location.part !== 'body') {
-    throw new ContentControlCreateError(
-      'createContentControl only supports targets in the document body.'
-    );
-  }
-  let blocks: BlockContent[] = doc.package.document.content;
-  let node: BlockContent | undefined;
-  for (let i = 0; i < address.steps.length; i++) {
-    const step = address.steps[i];
-    if (step.kind === 'block') {
-      node = blocks[step.index];
-      const next = address.steps[i + 1];
-      // Descend toward the paragraph: a blockSdt opens into its content; a table
-      // stays put so the following cell step can narrow into it.
-      if (next && node?.type === 'blockSdt') {
-        blocks = node.content;
-      } else if (next && !(node?.type === 'table' && next.kind === 'cell')) {
-        throw new ContentControlCreateError('Address does not resolve to a paragraph.');
-      }
-    } else if (step.kind === 'cell') {
-      if (node?.type !== 'table') {
-        throw new ContentControlCreateError('Address does not resolve to a paragraph.');
-      }
-      const cell = node.rows[step.row]?.cells[step.col];
-      if (!cell) throw new ContentControlCreateError('Address cell coordinate out of range.');
-      blocks = cell.content as BlockContent[];
-    } else {
-      throw new ContentControlCreateError('Address does not resolve to a paragraph.');
-    }
-  }
-  if (node?.type !== 'paragraph') {
-    throw new ContentControlCreateError('Address does not resolve to a paragraph.');
-  }
-  return node;
-}
-
-/** Resolve, locate, split, and wrap a text span in a paragraph (inline create). */
-function createInlineControl(
+/**
+ * Wrap an exact text span inside a paragraph in a new inline content control
+ * (`w:sdt`), returning a new {@link Document} and the created control's
+ * {@link ContentControlInfo}. Pure — the input is not mutated. This is the form
+ * needed inside table cells and mid-sentence, where block controls aren't
+ * allowed: runs are split at the span boundaries (formatting preserved) and
+ * interior fields/tabs/breaks are kept wholesale.
+ *
+ * The control's `w:sdtPr` is synthesized from `props`, and its `w:id` is
+ * auto-assigned (unique across the document) when `props.id` is omitted, so the
+ * control round-trips and `findContentControl(doc, { tag })` resolves it after a
+ * save/reload.
+ *
+ * @throws {@link ContentControlCreateError} when the paragraph or text isn't
+ * found, the span overlaps an existing control or crosses a non-run boundary,
+ * the `sdtType` can't be synthesized, or a supplied `id` already exists.
+ */
+export function createContentControl(
   doc: Document,
-  target: Extract<CreateContentControlTarget, { kind: 'text' }>,
-  props: SdtProperties
-): Document {
+  target: CreateContentControlTarget,
+  props: NewContentControlProps = {}
+): { doc: Document; control: ContentControlInfo } {
   if (!target.text) {
     throw new ContentControlCreateError('`text` must be a non-empty string.');
   }
@@ -375,11 +327,16 @@ function createInlineControl(
   if (occurrence < 1) {
     throw new ContentControlCreateError('`occurrence` must be >= 1.');
   }
+  if (props.id != null && findContentControl(doc, { id: props.id }, { scope: 'all' })) {
+    throw new ContentControlCreateError(
+      `A content control with id ${props.id} already exists; omit \`id\` to auto-assign a unique one.`
+    );
+  }
+  const id = props.id ?? maxControlId(doc) + 1;
+  const properties = buildCreatedProps(props, id);
 
-  // Build the transform that locates the span and wraps it.
   const transform = (para: Paragraph): Paragraph => {
     const full = getParagraphText(para);
-    // Find the requested occurrence of the exact substring.
     let from = -1;
     let count = 0;
     for (
@@ -399,176 +356,30 @@ function createInlineControl(
           : `Occurrence ${occurrence} of ${JSON.stringify(target.text)} not found (only ${count} present).`
       );
     }
-    const sdt: InlineSdt = { type: 'inlineSdt', properties: props, content: [] };
-    return { ...para, content: wrapInlineSpan(para.content, from, from + target.text.length, sdt) };
+    const sdt: InlineSdt = { type: 'inlineSdt', properties, content: [] };
+    return {
+      ...para,
+      content: wrapInlineSpan(para.content, from, from + target.text.length, sdt),
+    };
   };
 
-  // Resolve the paragraph by address or paraId, rebuilding the body immutably.
-  if (target.paragraph) {
-    const para = paragraphAtAddress(doc, target.paragraph);
-    const state = { done: false };
-    const content = mapFirstParagraph(
-      doc.package.document.content,
-      (p) => p === para,
-      transform,
-      state
-    );
-    if (!state.done)
-      throw new ContentControlCreateError('Address does not resolve to a paragraph.');
-    return rebuild(doc, content);
-  }
-  if (target.paraId != null) {
-    const state = { done: false };
-    const content = mapFirstParagraph(
-      doc.package.document.content,
-      (p) => p.paraId === target.paraId,
-      transform,
-      state
-    );
-    if (!state.done) {
-      throw new ContentControlCreateError(
-        `No paragraph found with paraId ${JSON.stringify(target.paraId)}.`
-      );
-    }
-    return rebuild(doc, content);
-  }
-  throw new ContentControlCreateError('A `text` target needs either `paraId` or `paragraph`.');
-}
-
-/** Field-wise equality of two structural step paths (order-independent of key serialization). */
-function stepsEqual(a: ContentControlStep[], b: ContentControlStep[]): boolean {
-  if (a.length !== b.length) return false;
-  return a.every((s, i) => {
-    const t = b[i];
-    if (s.kind !== t.kind) return false;
-    if (s.kind === 'block') return s.index === (t as typeof s).index;
-    if (s.kind === 'cell') return s.row === (t as typeof s).row && s.col === (t as typeof s).col;
-    return s.index === (t as typeof s).index; // 'inline'
-  });
-}
-
-/** Replace `blocks[from..to]` with a single {@link BlockSdt}, descending `containerPath` immutably. */
-function wrapBlockRange(
-  blocks: BlockContent[],
-  containerPath: ContentControlStep[],
-  from: number,
-  to: number,
-  properties: SdtProperties
-): BlockContent[] {
-  if (containerPath.length === 0) {
-    if (from < 0 || to >= blocks.length) {
-      throw new ContentControlCreateError('Block range is out of bounds.');
-    }
-    const wrapper: BlockSdt = { type: 'blockSdt', properties, content: blocks.slice(from, to + 1) };
-    return [...blocks.slice(0, from), wrapper, ...blocks.slice(to + 1)];
-  }
-  const [step, ...rest] = containerPath;
-  if (step.kind !== 'block') {
-    throw new ContentControlCreateError('Block create cannot target content inside a table cell.');
-  }
-  const block = blocks[step.index];
-  if (block?.type !== 'blockSdt') {
-    throw new ContentControlCreateError('Block range does not resolve to a block container.');
-  }
-  const nextContent = wrapBlockRange(block.content, rest, from, to, properties);
-  return blocks.map((b, i) => (i === step.index ? { ...block, content: nextContent } : b));
-}
-
-/** Wrap a contiguous block range in a block-level control (block create). */
-function createBlockControl(
-  doc: Document,
-  target: Extract<CreateContentControlTarget, { kind: 'blocks' }>,
-  properties: SdtProperties
-): Document {
-  const from = target.from;
-  const to = target.to ?? target.from;
-  if (from.location.part !== 'body' || to.location.part !== 'body') {
-    throw new ContentControlCreateError(
-      'createContentControl only supports targets in the document body.'
-    );
-  }
-  if (from.steps.some((s) => s.kind === 'cell') || to.steps.some((s) => s.kind === 'cell')) {
-    throw new ContentControlCreateError(
-      "Cannot wrap blocks inside a table cell in a block-level control. Use { kind: 'text' } for inline controls."
-    );
-  }
-  const fromLast = from.steps[from.steps.length - 1];
-  const toLast = to.steps[to.steps.length - 1];
-  if (fromLast?.kind !== 'block' || toLast?.kind !== 'block') {
-    throw new ContentControlCreateError('Block range addresses must end at a block index.');
-  }
-  const fromContainer = from.steps.slice(0, -1);
-  const toContainer = to.steps.slice(0, -1);
-  if (!stepsEqual(fromContainer, toContainer)) {
-    throw new ContentControlCreateError('Block range crosses container boundaries.');
-  }
-  if (fromLast.index > toLast.index) {
-    throw new ContentControlCreateError('Block range `from` must not come after `to`.');
-  }
-  const content = wrapBlockRange(
+  const state = { done: false };
+  const content = mapFirstParagraph(
     doc.package.document.content,
-    fromContainer,
-    fromLast.index,
-    toLast.index,
-    properties
+    (p) => p.paraId === target.paraId,
+    transform,
+    state
   );
-  return rebuild(doc, content);
-}
-
-/**
- * Wrap existing content in a **new** content control (`w:sdt`), returning a new
- * {@link Document} and the created {@link ContentControlInfo}. Pure — the input
- * is not mutated.
- *
- * Two target shapes (see {@link CreateContentControlTarget}):
- *
- * - `{ kind: 'text', … }` wraps an exact text span inside a paragraph in an
- *   **inline** control — the form needed inside table cells and mid-sentence,
- *   where block controls aren't allowed. Runs are split at the span boundaries
- *   (formatting preserved); interior fields/tabs/breaks are kept wholesale.
- * - `{ kind: 'blocks', … }` wraps a contiguous run of block-level content in a
- *   **block** control. Targets inside a table cell are rejected (the model can't
- *   hold a block SDT there) — use `kind: 'text'` instead.
- *
- * The control's `w:sdtPr` is synthesized from `props` (Word-correct element
- * order; a `date` control writes its format to `<w:dateFormat>`, not
- * `@w:fullDate`). The `w:id` is auto-assigned (max existing across the document
- * + 1) when `props.id` is omitted, and the control round-trips so
- * `findContentControl(doc, { tag })` resolves it after a save/reload.
- *
- * @throws {@link ContentControlCreateError} when the target can't be resolved,
- * the text/occurrence isn't found, the span overlaps an existing control or
- * crosses a non-run boundary, or a block target resolves inside a table cell.
- */
-export function createContentControl(
-  doc: Document,
-  target: CreateContentControlTarget,
-  props: NewContentControlProps = {},
-  options: { force?: boolean } = {}
-): { doc: Document; control: ContentControlInfo } {
-  // Resolve a document-unique `w:id`. A caller-supplied id that collides is
-  // rejected (a duplicate `w:id` is invalid OOXML); with `{ force: true }` we
-  // auto-assign a fresh unique id instead of erroring. Keeping the id unique
-  // also guarantees the find-back below resolves the control we just created.
-  let id = props.id ?? maxControlId(doc) + 1;
-  if (props.id != null && findContentControl(doc, { id: props.id }, { scope: 'all' })) {
-    if (!options.force) {
-      throw new ContentControlCreateError(
-        `A content control with id ${props.id} already exists. Pass { force: true } to auto-assign a unique id instead.`
-      );
-    }
-    id = maxControlId(doc) + 1;
+  if (!state.done) {
+    throw new ContentControlCreateError(
+      `No paragraph found with paraId ${JSON.stringify(target.paraId)}.`
+    );
   }
-  const properties = buildCreatedProps(props, id);
+  const nextDoc = rebuild(doc, content);
 
-  const nextDoc =
-    target.kind === 'text'
-      ? createInlineControl(doc, target, properties)
-      : createBlockControl(doc, target, properties);
-
-  const control = findContentControl(nextDoc, { id }, { scope: 'all' });
+  const control = findContentControl(nextDoc, { id });
   if (!control) {
-    // Should be unreachable: the control was just inserted with this unique id.
+    // Unreachable: the control was just inserted with this unique id.
     throw new ContentControlCreateError('Created control could not be located after insertion.');
   }
   return { doc: nextDoc, control };
