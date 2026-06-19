@@ -311,6 +311,11 @@ function mapFirstParagraph(
  * control round-trips and `findContentControl(doc, { tag })` resolves it after a
  * save/reload.
  *
+ * **Body only:** the search covers body paragraphs and block/table content —
+ * paragraphs inside headers or footers are not reachable. Passing a `paraId`
+ * from a header/footer part throws {@link ContentControlCreateError} with a
+ * "No paragraph found" message.
+ *
  * @throws {@link ContentControlCreateError} when the paragraph or text isn't
  * found, the span overlaps an existing control or crosses a non-run boundary,
  * the `sdtType` can't be synthesized, or a supplied `id` already exists.
