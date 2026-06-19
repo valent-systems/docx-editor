@@ -220,9 +220,31 @@ function maxControlId(doc: Document): number {
   );
 }
 
+/**
+ * SDT types {@link synthesizeSdtPr} emits a type marker for. The rest (`group`,
+ * `buildingBlockGallery`, `equation`, `citation`, `bibliography`, `unknown`)
+ * would serialize without a marker and silently reparse as `richText`, so a
+ * created control is rejected rather than lose its type on round-trip.
+ */
+const SYNTHESIZABLE_SDT_TYPES = new Set<SdtType>([
+  'richText',
+  'plainText',
+  'date',
+  'dropDownList',
+  'comboBox',
+  'checkbox',
+  'picture',
+]);
+
 /** Build the {@link SdtProperties} for a created control, with a synthesized raw `w:sdtPr`. */
 function buildCreatedProps(props: NewContentControlProps, id: number): SdtProperties {
-  const out: SdtProperties = { sdtType: props.sdtType ?? 'richText', id };
+  const sdtType = props.sdtType ?? 'richText';
+  if (!SYNTHESIZABLE_SDT_TYPES.has(sdtType)) {
+    throw new ContentControlCreateError(
+      `Cannot create a '${sdtType}' content control; supported types: ${[...SYNTHESIZABLE_SDT_TYPES].join(', ')}.`
+    );
+  }
+  const out: SdtProperties = { sdtType, id };
   if (props.tag != null) out.tag = props.tag;
   if (props.alias != null) out.alias = props.alias;
   if (props.lock != null) out.lock = props.lock;
@@ -315,9 +337,13 @@ function paragraphAtAddress(doc: Document, address: ContentControlAddress): Para
     const step = address.steps[i];
     if (step.kind === 'block') {
       node = blocks[step.index];
-      if (i < address.steps.length - 1) {
-        if (node?.type === 'blockSdt') blocks = node.content;
-        else throw new ContentControlCreateError('Address does not resolve to a paragraph.');
+      const next = address.steps[i + 1];
+      // Descend toward the paragraph: a blockSdt opens into its content; a table
+      // stays put so the following cell step can narrow into it.
+      if (next && node?.type === 'blockSdt') {
+        blocks = node.content;
+      } else if (next && !(node?.type === 'table' && next.kind === 'cell')) {
+        throw new ContentControlCreateError('Address does not resolve to a paragraph.');
       }
     } else if (step.kind === 'cell') {
       if (node?.type !== 'table') {

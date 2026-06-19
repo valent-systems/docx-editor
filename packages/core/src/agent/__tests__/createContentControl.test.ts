@@ -154,6 +154,42 @@ describe('createContentControl — inline text wrap', () => {
     expect(findContentControl(next, { tag: 'm' })!.text).toBe('ME');
   });
 
+  test('resolves a structural paragraph address that descends through a table cell', () => {
+    const doc = mkBodyDoc([
+      mkPara(undefined, mkRun('intro')),
+      {
+        type: 'table',
+        rows: [
+          {
+            type: 'tableRow',
+            cells: [
+              { type: 'tableCell', content: [mkPara(undefined, mkRun('label'))] },
+              { type: 'tableCell', content: [mkPara(undefined, mkRun('wrap ME here'))] },
+            ],
+          },
+        ],
+      },
+    ]);
+    // body block 1 (table) → cell (0,1) → block 0 (paragraph) — the shape
+    // findContentControls emits for a cell paragraph.
+    const paragraph: ContentControlAddress = {
+      location: { part: 'body' },
+      steps: [
+        { kind: 'block', index: 1 },
+        { kind: 'cell', row: 0, col: 1 },
+        { kind: 'block', index: 0 },
+      ],
+    };
+    const { doc: next, control } = createContentControl(
+      doc,
+      { kind: 'text', paragraph, text: 'ME' },
+      { tag: 'cell-span' }
+    );
+    expect(control.kind).toBe('inline');
+    expect(control.address.steps.some((s) => s.kind === 'cell')).toBe(true);
+    expect(findContentControl(next, { tag: 'cell-span' })!.text).toBe('ME');
+  });
+
   test('selects the requested occurrence when the text repeats', () => {
     const doc = mkBodyDoc([mkPara('P', mkRun('x [Y] z [Y] w'))]);
     const { doc: next } = createContentControl(
@@ -212,6 +248,12 @@ describe('createContentControl — errors', () => {
   test('throws when the paraId is not found', () => {
     expect(() =>
       createContentControl(doc(), { kind: 'text', paraId: 'NOPE', text: 'ab' }, {})
+    ).toThrow(ContentControlCreateError);
+  });
+
+  test('rejects an sdtType that cannot be synthesized (would lose its type on round-trip)', () => {
+    expect(() =>
+      createContentControl(doc(), { kind: 'text', paraId: 'P', text: 'ab' }, { sdtType: 'group' })
     ).toThrow(ContentControlCreateError);
   });
 

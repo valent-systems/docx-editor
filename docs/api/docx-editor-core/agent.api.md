@@ -151,6 +151,11 @@ export interface ContentControlInfo {
 }
 
 // @public
+export class ContentControlKindError extends Error {
+    constructor(detail: string);
+}
+
+// @public
 export type ContentControlLocation = {
     part: 'body';
 } | {

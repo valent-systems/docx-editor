@@ -130,6 +130,7 @@ export {
   ContentControlLockedError,
   ContentControlTypeError,
   ContentControlBoundError,
+  ContentControlKindError,
   type ContentControlFilter,
   type ContentControlInfo,
   type ContentControlLocation,
