@@ -516,7 +516,7 @@ describe('setContentControlValue — inline controls', () => {
     ).toThrow(ContentControlBoundError);
   });
 
-  test("scope:'all' reaches an inline typed control in a header", () => {
+  test('includeHeadersFooters reaches an inline typed control in a header', () => {
     const doc = {
       package: {
         document: { content: [mkPara({ type: 'run', content: [{ type: 'text', text: 'body' }] })] },
@@ -550,9 +550,11 @@ describe('setContentControlValue — inline controls', () => {
       doc,
       { tag: 'hdr-choice' },
       { kind: 'dropdown', value: 'x' },
-      { scope: 'all' }
+      { includeHeadersFooters: true }
     );
-    expect(findContentControl(next, { tag: 'hdr-choice' }, { scope: 'all' })!.text).toBe('X');
+    expect(
+      findContentControl(next, { tag: 'hdr-choice' }, { includeHeadersFooters: true })!.text
+    ).toBe('X');
   });
 
   test('inline typed values survive a full save → reparse round-trip', async () => {
@@ -596,5 +598,65 @@ describe('setContentControlValue — inline controls', () => {
     expect(eff.text).toBe('June 1, 2026');
     expect(sel.kind).toBe('inline');
     expect(sel.text).toBe('Services');
+  });
+});
+
+describe('setContentControlValue — { all: true }', () => {
+  // Two checkboxes sharing one tag — e.g. an "agree" box repeated on two pages.
+  const twoCheckboxes = (): Document => {
+    const checkbox = (): SdtProperties => ({
+      sdtType: 'checkbox',
+      tag: 'agree',
+      checked: false,
+      rawPropertiesXml:
+        '<w:sdtPr><w:tag w:val="agree"/>' +
+        '<w14:checkbox><w14:checked w14:val="0"/>' +
+        '<w14:checkedState w14:val="2612" w14:font="MS Gothic"/>' +
+        '<w14:uncheckedState w14:val="2610" w14:font="MS Gothic"/></w14:checkbox></w:sdtPr>',
+    });
+    return {
+      package: {
+        document: {
+          content: [
+            {
+              type: 'blockSdt',
+              properties: checkbox(),
+              content: [{ type: 'paragraph', content: [] }],
+            },
+            {
+              type: 'blockSdt',
+              properties: checkbox(),
+              content: [{ type: 'paragraph', content: [] }],
+            },
+          ],
+        },
+      },
+    } as unknown as Document;
+  };
+
+  test('default sets only the first; { all } checks every matching control', () => {
+    const first = setContentControlValue(
+      twoCheckboxes(),
+      { tag: 'agree' },
+      {
+        kind: 'checkbox',
+        checked: true,
+      }
+    );
+    expect(
+      first.package.document.content.map((c) =>
+        c.type === 'blockSdt' ? c.properties.checked : null
+      )
+    ).toEqual([true, false]);
+
+    const all = setContentControlValue(
+      twoCheckboxes(),
+      { tag: 'agree' },
+      { kind: 'checkbox', checked: true },
+      { all: true }
+    );
+    expect(
+      all.package.document.content.map((c) => (c.type === 'blockSdt' ? c.properties.checked : null))
+    ).toEqual([true, true]);
   });
 });

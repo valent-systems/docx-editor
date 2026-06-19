@@ -230,10 +230,13 @@ export function applyContentControlValue(
 /**
  * Set a typed value (dropdown selection / checkbox / date) on the first control
  * matching `filter` — **block-level OR inline** (inline includes controls inside
- * table cells, and with `scope: 'all'`, headers/footers) — returning a new
+ * table cells, and with `includeHeadersFooters: true`, headers/footers) — returning a new
  * {@link Document}. Updates both the visible content and the structured raw
  * state (dropdown `w:lastValue`, `w14:checked`, `w:date/@w:fullDate`), so the
  * result round-trips and Word shows the new value.
+ *
+ * Pass `{ all: true }` to set the value on **every** control matching `filter`
+ * (a value shared across duplicated controls) instead of just the first.
  *
  * Throws `ContentControlNotFoundError` if nothing matches,
  * {@link ContentControlLockedError} if content-locked,
@@ -245,7 +248,7 @@ export function setContentControlValue(
   doc: Document,
   filter: ContentControlFilter,
   value: ContentControlValue,
-  options: { force?: boolean; scope?: 'body' | 'all' } = {}
+  options: { force?: boolean; includeHeadersFooters?: boolean; all?: boolean } = {}
 ): Document {
   const guard = (props: SdtProperties): void => {
     if (!options.force && isContentLocked(props.lock)) {
@@ -272,5 +275,13 @@ export function setContentControlValue(
     ) as InlineSdt['content'];
     return [{ ...control, properties, content: inlineContent }];
   };
-  return applyControlMutation(doc, filter, blockOp, inlineOp, options.scope ?? 'body');
+  return applyControlMutation(
+    doc,
+    filter,
+    blockOp,
+    inlineOp,
+    options.includeHeadersFooters ?? false,
+    undefined,
+    options.all ?? false
+  );
 }

@@ -155,18 +155,29 @@ const out = await repackDocx(doc);
 await writeFile("contract-acme.docx", Buffer.from(out));
 ```
 
-## Scope
+## Headers and footers
 
-By default the API searches the main document body. Pass `scope: 'all'` to also search headers and footers:
+By default the API searches the main document body. Pass `includeHeadersFooters: true` to also search headers and footers:
 
 ```ts
-findContentControls(doc, { type: 'checkbox' }, { scope: 'all' });
-setContentControlContent(doc, { tag: 'supplier' }, 'ACME Ltd', { scope: 'all' });
+findContentControls(doc, { type: 'checkbox' }, { includeHeadersFooters: true });
+setContentControlContent(doc, { tag: 'supplier' }, 'ACME Ltd', { includeHeadersFooters: true });
 ```
 
-`scope: 'all'` needs a full `Document` (a bare `DocumentBody` has no header/footer parts), and a result's `location` tells you which part it lives in. When filling a control, the value inherits the surrounding formatting so it matches the text it replaces.
+`includeHeadersFooters` needs a full `Document` (a bare `DocumentBody` has no header/footer parts), and a result's `location` tells you which part it lives in. When filling a control, the value inherits the surrounding formatting so it matches the text it replaces.
 
-The live-editor `DocxEditorRef` methods (`getContentControls` / `setContentControlContent` / `removeContentControl`) cover the body only — they take no `scope`, so header and footer controls are addressable from the headless API.
+The live-editor `DocxEditorRef` methods (`getContentControls` / `setContentControlContent` / `removeContentControl`) cover the body only — they take no `includeHeadersFooters` option, so header and footer controls are addressable from the headless API.
+
+## Filling every match
+
+By default the mutators (`setContentControlContent`, `setContentControlValue`, `removeContentControl`) act on the **first** control matching the filter. Pass `{ all: true }` to act on **every** match instead — for one logical value that recurs under a shared tag (a name in the body, a running header, and several table cells):
+
+```ts
+setContentControlContent(doc, { tag: 'customerName' }, 'Acme GmbH', { all: true, includeHeadersFooters: true });
+removeContentControl(doc, {}, { all: true, keepContent: true }); // flatten: unwrap every control
+```
+
+`{ all: true }` is atomic — if any matched control is refused by a lock, type, or data-binding guard, nothing is written unless you also pass `{ force: true }`.
 
 ## Current limits
 

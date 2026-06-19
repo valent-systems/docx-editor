@@ -188,7 +188,7 @@ function wrapInlineSpan(
 
 /** Highest `w:id` across every control in the document (body + header/footer). */
 function maxControlId(doc: Document): number {
-  return findContentControls(doc, {}, { scope: 'all' }).reduce(
+  return findContentControls(doc, {}, { includeHeadersFooters: true }).reduce(
     (max, c) => (c.id != null && c.id > max ? c.id : max),
     0
   );
@@ -327,7 +327,10 @@ export function createContentControl(
   if (occurrence < 1) {
     throw new ContentControlCreateError('`occurrence` must be >= 1.');
   }
-  if (props.id != null && findContentControl(doc, { id: props.id }, { scope: 'all' })) {
+  if (
+    props.id != null &&
+    findContentControl(doc, { id: props.id }, { includeHeadersFooters: true })
+  ) {
     throw new ContentControlCreateError(
       `A content control with id ${props.id} already exists; omit \`id\` to auto-assign a unique one.`
     );

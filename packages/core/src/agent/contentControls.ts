@@ -9,8 +9,8 @@
  *
  * Both **block-level** (`w:sdt` wrapping paragraphs/tables) and **inline**
  * (`w:sdt` inside a paragraph) controls are addressed, including inline
- * controls inside table cells (and nested tables). With `{ scope: 'all' }` the
- * walk also covers header/footer parts.
+ * controls inside table cells (and nested tables). With
+ * `{ includeHeadersFooters: true }` the walk also covers header/footer parts.
  *
  * Not surfaced (model limitations): a block SDT placed directly inside a table
  * cell (`TableCell.content` cannot hold one), an inline SDT inside a hyperlink
@@ -189,12 +189,12 @@ function infoOf(
 /** Options for {@link findContentControls}. */
 export interface FindContentControlsOptions {
   /**
-   * `'body'` (default) searches only the main document story. `'all'`
-   * additionally searches header/footer parts — but only when a full
-   * {@link Document} is passed (a bare `DocumentBody` carries no parts, so
-   * `'all'` then searches the body only and never throws).
+   * When `true`, also search header/footer parts — but only when a full
+   * {@link Document} is passed (a bare `DocumentBody` carries no parts, so this
+   * then searches the body only and never throws). Defaults to `false` (the main
+   * document story only).
    */
-  scope?: 'body' | 'all';
+  includeHeadersFooters?: boolean;
 }
 
 /**
@@ -204,9 +204,9 @@ export interface FindContentControlsOptions {
  *
  * The walk descends body blocks, block SDTs, tables (row-major, including
  * nested tables) into cell content, and paragraph inline content (inline
- * SDTs, recursing into nested inline SDTs). With `scope: 'all'` and a full
- * {@link Document}, header then footer parts are searched after the body,
- * each sorted by relationship id for deterministic order.
+ * SDTs, recursing into nested inline SDTs). With `{ includeHeadersFooters: true }`
+ * and a full {@link Document}, header then footer parts are searched after the
+ * body, each sorted by relationship id for deterministic order.
  *
  * Not surfaced (model limitations, documented): a block SDT placed directly
  * inside a table cell (`TableCell.content` is `(Paragraph | Table)[]`), an
@@ -267,7 +267,7 @@ export function findContentControls(
 
   walkBlocks(bodyOf(input).content, { part: 'body' }, [], 0);
 
-  if (options.scope === 'all' && 'package' in input) {
+  if (options.includeHeadersFooters && 'package' in input) {
     const walkParts = (
       parts: Map<string, HeaderFooter> | undefined,
       part: 'header' | 'footer'
@@ -572,12 +572,22 @@ function toInline(replacement: string | BlockContent[], control: InlineSdt): Inl
   return [run];
 }
 
-type ControlWalkState = { done: boolean };
+/**
+ * Walk state shared by the control mutators. `matched` counts the controls the
+ * op has been applied to so far; `stopAtFirst` halts the walk after the first
+ * match (the default). The `{ all: true }` mutator option clears `stopAtFirst`
+ * so every matching control is mutated in one pass.
+ */
+type ControlWalkState = { matched: number; stopAtFirst: boolean };
+
+/** A first-match walk is finished once it has mutated one control. */
+const walkDone = (state: ControlWalkState): boolean => state.stopAtFirst && state.matched > 0;
 
 /**
- * Rebuild a paragraph's (or inline SDT's) inline content, applying `inlineOp`
- * to the first matching inline control and recursing into nested inline SDTs.
- * Returns the same array reference when nothing changed (purity / cheap diff).
+ * Rebuild a paragraph's (or inline SDT's) inline content, applying `inlineOp` to
+ * the first matching inline control (or every match, when the walk isn't
+ * stop-at-first) and recursing into nested inline SDTs. Returns the same array
+ * reference when nothing changed (purity / cheap diff).
  */
 function applyToFirstInlineContent(
   content: Paragraph['content'],
@@ -588,13 +598,13 @@ function applyToFirstInlineContent(
   let changed = false;
   const out: Paragraph['content'] = [];
   for (const node of content) {
-    if (state.done || node.type !== 'inlineSdt') {
+    if (walkDone(state) || node.type !== 'inlineSdt') {
       out.push(node);
       continue;
     }
     if (matches(node.properties, filter)) {
       out.push(...inlineOp(node));
-      state.done = true;
+      state.matched += 1;
       changed = true;
       continue;
     }
@@ -619,13 +629,13 @@ function applyToFirstInTable(
   inlineOp: InlineControlOp,
   state: ControlWalkState
 ): Table {
-  if (state.done) return table;
+  if (walkDone(state)) return table;
   let changed = false;
   const rows = table.rows.map((row) => {
-    if (state.done) return row;
+    if (walkDone(state)) return row;
     let rowChanged = false;
     const cells = row.cells.map((cell) => {
-      if (state.done) return cell;
+      if (walkDone(state)) return cell;
       const cellContent = cell.content as BlockContent[];
       const next = applyToFirstControl(cellContent, filter, blockOp, inlineOp, state);
       if (next !== cellContent) {
@@ -645,10 +655,11 @@ function applyToFirstInTable(
 }
 
 /**
- * Rebuild `blocks`, applying the kind-appropriate op to the FIRST control
- * matching `filter` — block controls via `blockOp`, inline controls (including
- * inside table cells and nested tables) via `inlineOp`. The result is spliced
- * at the control's own level. `state.done` stops the walk after the first match.
+ * Rebuild `blocks`, applying the kind-appropriate op to the first matching
+ * control — block controls via `blockOp`, inline controls (including inside
+ * table cells and nested tables) via `inlineOp`. The result is spliced at the
+ * control's own level. The walk stops after the first match unless `state` is in
+ * apply-to-all mode (`stopAtFirst === false`), in which case every match is hit.
  */
 function applyToFirstControl(
   blocks: BlockContent[],
@@ -660,14 +671,14 @@ function applyToFirstControl(
   let changed = false;
   const out: BlockContent[] = [];
   for (const block of blocks) {
-    if (state.done) {
+    if (walkDone(state)) {
       out.push(block);
       continue;
     }
     if (block.type === 'blockSdt') {
       if (matches(block.properties, filter)) {
         out.push(...blockOp(block));
-        state.done = true;
+        state.matched += 1;
         changed = true;
         continue;
       }
@@ -715,21 +726,30 @@ function rebuildPart(
 }
 
 /**
- * Apply a content-control mutation to the first match across the body and —
- * when `scope: 'all'` — header/footer parts (headers then footers, by rId).
- * `finalizeBody` post-processes the rebuilt body content (e.g. the empty-body
- * backstop for removals). Throws {@link ContentControlNotFoundError} if nothing
- * matched.
+ * Apply a content-control mutation across the body and — when
+ * `includeHeadersFooters` — header/footer parts (headers then footers, by rId).
+ * By default it stops at the first match; with `all: true` it applies the op to
+ * every matching control in document order. `finalizeBody` post-processes the
+ * rebuilt body content (e.g. the empty-body backstop for removals).
+ *
+ * The op's own guards (lock/type/data-binding) throw on the first offending
+ * match, so an `all` run is atomic: it either mutates every match or — if one is
+ * refused — throws and leaves the document untouched (the caller's input is never
+ * mutated; a partially-rebuilt tree is discarded with the exception). Throws
+ * {@link ContentControlNotFoundError} if nothing matched.
  */
 export function applyControlMutation(
   doc: Document,
   filter: ContentControlFilter,
   blockOp: BlockControlOp,
   inlineOp: InlineControlOp,
-  scope: 'body' | 'all',
-  finalizeBody: (content: BlockContent[]) => BlockContent[] = (c) => c
+  includeHeadersFooters: boolean,
+  finalizeBody: (content: BlockContent[]) => BlockContent[] = (c) => c,
+  all = false
 ): Document {
-  const state: ControlWalkState = { done: false };
+  const state: ControlWalkState = { matched: 0, stopAtFirst: !all };
+  let next = doc;
+
   const bodyContent = applyToFirstControl(
     doc.package.document.content,
     filter,
@@ -737,20 +757,27 @@ export function applyControlMutation(
     inlineOp,
     state
   );
-  if (state.done) return rebuild(doc, finalizeBody(bodyContent));
+  if (bodyContent !== doc.package.document.content) {
+    next = rebuild(next, finalizeBody(bodyContent));
+  }
+  if (walkDone(state)) return next;
 
-  if (scope === 'all') {
+  if (includeHeadersFooters) {
     for (const kind of ['header', 'footer'] as const) {
-      const parts = kind === 'header' ? doc.package.headers : doc.package.footers;
+      const parts = kind === 'header' ? next.package.headers : next.package.footers;
       if (!parts) continue;
       for (const rId of [...parts.keys()].sort()) {
         const part = parts.get(rId)!;
         const nextContent = applyToFirstControl(part.content, filter, blockOp, inlineOp, state);
-        if (state.done) return rebuildPart(doc, kind, rId, { ...part, content: nextContent });
+        if (nextContent !== part.content) {
+          next = rebuildPart(next, kind, rId, { ...part, content: nextContent });
+        }
+        if (walkDone(state)) return next;
       }
     }
   }
-  throw new ContentControlNotFoundError(filter);
+  if (state.matched === 0) throw new ContentControlNotFoundError(filter);
+  return next;
 }
 
 /** Shared write guards for block + inline content writes (all property-only, so kind-agnostic). */
@@ -776,8 +803,8 @@ function assertRemovable(
 
 /**
  * Replace the content of the first control matching `filter` — block-level OR
- * inline (including inside table cells and, with `scope: 'all'`, headers and
- * footers). `replacement` may be a string or block content.
+ * inline (including inside table cells and, with `includeHeadersFooters: true`,
+ * headers and footers). `replacement` may be a string or block content.
  *
  * - For a **block** control the string is split into paragraphs on newlines
  *   (a `plainText` control collapses to one paragraph); block content is used
@@ -787,6 +814,10 @@ function assertRemovable(
  *   richText control turns `\n` into a line break; a plainText control never
  *   gets one. Passing `BlockContent[]` to an inline control throws
  *   {@link ContentControlKindError} unless it is a single all-inline paragraph.
+ *
+ * Pass `{ all: true }` to fill **every** control matching `filter` (one logical
+ * value that recurs under a shared tag — e.g. a name in the body, a running
+ * header, and several table cells) instead of just the first.
  *
  * The control's properties, tag/alias, and lossless raw `w:sdtPr` are preserved.
  * When the control was showing its placeholder (`w:showingPlcHdr`), that flag is
@@ -802,7 +833,7 @@ export function setContentControlContent(
   doc: Document,
   filter: ContentControlFilter,
   replacement: string | BlockContent[],
-  options: { force?: boolean; scope?: 'body' | 'all' } = {}
+  options: { force?: boolean; includeHeadersFooters?: boolean; all?: boolean } = {}
 ): Document {
   const blockOp: BlockControlOp = (control) => {
     assertContentWritable(control.properties, options.force);
@@ -826,16 +857,27 @@ export function setContentControlContent(
       },
     ];
   };
-  return applyControlMutation(doc, filter, blockOp, inlineOp, options.scope ?? 'body');
+  return applyControlMutation(
+    doc,
+    filter,
+    blockOp,
+    inlineOp,
+    options.includeHeadersFooters ?? false,
+    undefined,
+    options.all ?? false
+  );
 }
 
 /**
  * Remove the first control matching `filter` — block-level OR inline (incl.
- * inside table cells and, with `scope: 'all'`, headers/footers). With
- * `keepContent: true` the control's content is unwrapped in place (the box goes
+ * inside table cells and, with `includeHeadersFooters: true`, headers/footers).
+ * With `keepContent: true` the control's content is unwrapped in place (the box goes
  * away, the content stays) — block content lifts to its block siblings, inline
  * content stays inline in the enclosing paragraph. Otherwise the control and
  * its content are deleted.
+ *
+ * Pass `{ all: true }` to remove **every** control matching `filter` (e.g. to
+ * flatten a finished template by unwrapping all controls) instead of the first.
  *
  * Unwrapping a repeating-section (item) is refused unless `force`, since lifting
  * its blocks out would orphan the (w15) repeating structure.
@@ -846,7 +888,12 @@ export function setContentControlContent(
 export function removeContentControl(
   doc: Document,
   filter: ContentControlFilter,
-  options: { force?: boolean; keepContent?: boolean; scope?: 'body' | 'all' } = {}
+  options: {
+    force?: boolean;
+    keepContent?: boolean;
+    includeHeadersFooters?: boolean;
+    all?: boolean;
+  } = {}
 ): Document {
   const blockOp: BlockControlOp = (control) => {
     assertRemovable(control.properties, options);
@@ -866,7 +913,8 @@ export function removeContentControl(
     filter,
     blockOp,
     inlineOp,
-    options.scope ?? 'body',
-    finalizeBody
+    options.includeHeadersFooters ?? false,
+    finalizeBody,
+    options.all ?? false
   );
 }

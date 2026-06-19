@@ -482,7 +482,7 @@ export function findContentControls(input: Document_2 | DocumentBody, filter?: C
 
 // @public
 export interface FindContentControlsOptions {
-    scope?: 'body' | 'all';
+    includeHeadersFooters?: boolean;
 }
 
 // @public
@@ -1195,7 +1195,8 @@ export interface Relationship {
 export function removeContentControl(doc: Document_2, filter: ContentControlFilter, options?: {
     force?: boolean;
     keepContent?: boolean;
-    scope?: 'body' | 'all';
+    includeHeadersFooters?: boolean;
+    all?: boolean;
 }): Document_2;
 
 // @public
@@ -1353,13 +1354,15 @@ export function serializeSectionProperties(props: SectionProperties | undefined)
 // @public
 export function setContentControlContent(doc: Document_2, filter: ContentControlFilter, replacement: string | BlockContent[], options?: {
     force?: boolean;
-    scope?: 'body' | 'all';
+    includeHeadersFooters?: boolean;
+    all?: boolean;
 }): Document_2;
 
 // @public
 export function setContentControlValue(doc: Document_2, filter: ContentControlFilter, value: ContentControlValue, options?: {
     force?: boolean;
-    scope?: 'body' | 'all';
+    includeHeadersFooters?: boolean;
+    all?: boolean;
 }): Document_2;
 
 // @public

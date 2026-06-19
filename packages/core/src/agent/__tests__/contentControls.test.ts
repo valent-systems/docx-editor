@@ -437,8 +437,8 @@ describe('header/footer scope', () => {
     expect(findContentControls(hfDoc()).map((c) => c.tag)).toEqual(['body-ctrl']);
   });
 
-  test("scope:'all' discovers header/footer controls with rId location, body first", () => {
-    const all = findContentControls(hfDoc(), {}, { scope: 'all' });
+  test('includeHeadersFooters discovers header/footer controls with rId location, body first', () => {
+    const all = findContentControls(hfDoc(), {}, { includeHeadersFooters: true });
     expect(all.map((c) => c.tag)).toEqual(['body-ctrl', 'hdr-ctrl', 'ftr-ctrl']);
     expect(all.find((c) => c.tag === 'hdr-ctrl')!.location).toEqual({
       part: 'header',
@@ -450,11 +450,13 @@ describe('header/footer scope', () => {
     });
   });
 
-  test("scope:'all' on a bare DocumentBody does not throw and returns body only", () => {
+  test('includeHeadersFooters on a bare DocumentBody does not throw and returns body only', () => {
     const body = { content: [mkPara(mkInlineSdt('only', 'x'))] } as unknown as Parameters<
       typeof findContentControls
     >[0];
-    expect(findContentControls(body, {}, { scope: 'all' }).map((c) => c.tag)).toEqual(['only']);
+    expect(
+      findContentControls(body, {}, { includeHeadersFooters: true }).map((c) => c.tag)
+    ).toEqual(['only']);
   });
 });
 
@@ -620,7 +622,7 @@ describe('setContentControlContent — inline', () => {
     expect(sdt.properties.rawPropertiesXml).not.toContain('showingPlcHdr');
   });
 
-  test("scope:'all' writes an inline control in a header, immutably", () => {
+  test('includeHeadersFooters writes an inline control in a header, immutably', () => {
     const hfWrite = (): Document =>
       ({
         package: {
@@ -636,9 +638,15 @@ describe('setContentControlContent — inline', () => {
     );
 
     const doc0 = hfWrite();
-    const next = setContentControlContent(doc0, { tag: 'h' }, 'NEW', { scope: 'all' });
-    expect(findContentControl(next, { tag: 'h' }, { scope: 'all' })!.text).toBe('NEW');
-    expect(findContentControl(doc0, { tag: 'h' }, { scope: 'all' })!.text).toBe('OLD'); // original intact
+    const next = setContentControlContent(doc0, { tag: 'h' }, 'NEW', {
+      includeHeadersFooters: true,
+    });
+    expect(findContentControl(next, { tag: 'h' }, { includeHeadersFooters: true })!.text).toBe(
+      'NEW'
+    );
+    expect(findContentControl(doc0, { tag: 'h' }, { includeHeadersFooters: true })!.text).toBe(
+      'OLD'
+    ); // original intact
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((next as any).package.headers).not.toBe((doc0 as any).package.headers);
   });
@@ -666,5 +674,86 @@ describe('removeContentControl — inline', () => {
     expect(para.content.some((n: any) => n.type === 'inlineSdt')).toBe(false);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(para.content.map((n: any) => n.content?.[0]?.text)).toEqual(['A ', ' B']);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// { all: true } — apply a mutation to every matching control, not just the first.
+// ---------------------------------------------------------------------------
+
+describe('setContentControlContent / removeContentControl — { all: true }', () => {
+  // Same tag recurring three times: two in the body (one in a table cell), and
+  // — for scope — one in a header and one in a footer.
+  const repeatedDoc = (extras: Record<string, unknown> = {}): Document =>
+    ({
+      package: {
+        document: {
+          content: [
+            mkPara(mkRun('Dear '), mkInlineSdt('name', 'OLD', extras), mkRun(',')),
+            {
+              type: 'table',
+              rows: [
+                {
+                  type: 'tableRow',
+                  cells: [{ type: 'tableCell', content: [mkPara(mkInlineSdt('name', 'OLD'))] }],
+                },
+              ],
+            },
+          ],
+        },
+        headers: new Map([
+          ['rId7', { type: 'header', content: [mkPara(mkInlineSdt('name', 'OLD'))] }],
+        ]),
+        footers: new Map([
+          ['rId9', { type: 'footer', content: [mkPara(mkInlineSdt('name', 'OLD'))] }],
+        ]),
+      },
+    }) as unknown as Document;
+
+  test('default (first-match) fills only the first; { all } fills every body match', () => {
+    const first = setContentControlContent(repeatedDoc(), { tag: 'name' }, 'NEW');
+    expect(findContentControls(first, { tag: 'name' }).map((c) => c.text)).toEqual(['NEW', 'OLD']);
+
+    const all = setContentControlContent(repeatedDoc(), { tag: 'name' }, 'NEW', { all: true });
+    expect(findContentControls(all, { tag: 'name' }).map((c) => c.text)).toEqual(['NEW', 'NEW']);
+  });
+
+  test('{ all } with includeHeadersFooters fills body, header, and footer matches', () => {
+    const all = setContentControlContent(repeatedDoc(), { tag: 'name' }, 'NEW', {
+      all: true,
+      includeHeadersFooters: true,
+    });
+    expect(
+      findContentControls(all, { tag: 'name' }, { includeHeadersFooters: true }).map((c) => c.text)
+    ).toEqual(['NEW', 'NEW', 'NEW', 'NEW']);
+  });
+
+  test('{ all } is atomic — a locked match aborts the whole write, input untouched', () => {
+    const doc = repeatedDoc({ lock: 'contentLocked' }); // the first 'name' is locked
+    expect(() => setContentControlContent(doc, { tag: 'name' }, 'NEW', { all: true })).toThrow(
+      ContentControlLockedError
+    );
+    // nothing was written — the original is unchanged
+    expect(findContentControls(doc, { tag: 'name' }).map((c) => c.text)).toEqual(['OLD', 'OLD']);
+  });
+
+  test('{ all } with force overrides the lock and fills every match', () => {
+    const doc = repeatedDoc({ lock: 'contentLocked' });
+    const forced = setContentControlContent(doc, { tag: 'name' }, 'NEW', {
+      all: true,
+      force: true,
+    });
+    expect(findContentControls(forced, { tag: 'name' }).map((c) => c.text)).toEqual(['NEW', 'NEW']);
+  });
+
+  test('{ all } with no match still throws ContentControlNotFoundError', () => {
+    expect(() =>
+      setContentControlContent(repeatedDoc(), { tag: 'absent' }, 'NEW', { all: true })
+    ).toThrow(ContentControlNotFoundError);
+  });
+
+  test('removeContentControl { all } removes every matching control', () => {
+    const all = removeContentControl(repeatedDoc(), { tag: 'name' }, { all: true });
+    expect(findContentControls(all, { tag: 'name' })).toHaveLength(0);
   });
 });
