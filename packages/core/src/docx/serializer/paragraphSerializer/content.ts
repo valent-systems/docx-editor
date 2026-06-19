@@ -270,8 +270,13 @@ export function synthesizeSdtPr(props: SdtProperties): string {
       break;
     }
     case 'checkbox':
+      // Emit the default glyph states (Word's MS Gothic ☒/☐) so a created
+      // checkbox renders correctly and the value setter reads the symbol font
+      // instead of falling back to a bare code point.
       prParts.push(
-        `<w14:checkbox><w14:checked w14:val="${props.checked ? '1' : '0'}"/></w14:checkbox>`
+        `<w14:checkbox><w14:checked w14:val="${props.checked ? '1' : '0'}"/>` +
+          '<w14:checkedState w14:val="2612" w14:font="MS Gothic"/>' +
+          '<w14:uncheckedState w14:val="2610" w14:font="MS Gothic"/></w14:checkbox>'
       );
       break;
     case 'picture':

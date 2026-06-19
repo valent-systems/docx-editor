@@ -414,6 +414,38 @@ describe('createContentControl — sdtPr synthesis + round-trip', () => {
     expect(raw).toContain('<w:id w:val=');
   });
 
+  test('a created checkbox synthesizes glyph states and fills with the symbol font', async () => {
+    const doc = mkBodyDoc([mkPara('P', mkRun('Agree: '), mkRun('[ ]'))]);
+    const { doc: created } = createContentControl(
+      doc,
+      { kind: 'text', paraId: 'P', text: '[ ]' },
+      { tag: 'agree', sdtType: 'checkbox', checked: false }
+    );
+    const sdt = bodyBlocks(created)[0].content.find(
+      (n: { type: string }) => n.type === 'inlineSdt'
+    );
+    const raw: string = sdt.properties.rawPropertiesXml;
+    expect(raw).toContain('<w14:checked w14:val="0"/>');
+    expect(raw).toContain('<w14:checkedState w14:val="2612" w14:font="MS Gothic"/>');
+    expect(raw).toContain('<w14:uncheckedState w14:val="2610" w14:font="MS Gothic"/>');
+
+    // The value setter reads the synthesized states for the glyph + symbol font.
+    const filled = setContentControlValue(
+      created,
+      { tag: 'agree' },
+      { kind: 'checkbox', checked: true }
+    );
+    const fsdt = bodyBlocks(filled)[0].content.find(
+      (n: { type: string }) => n.type === 'inlineSdt'
+    );
+    expect(fsdt.content[0].content[0].text).toBe('☒');
+    expect(fsdt.content[0].formatting.fontFamily.ascii).toBe('MS Gothic');
+
+    // still a checkbox after a save → reparse
+    const reparsed = await parseDocx(await createDocx(filled));
+    expect(findContentControl(reparsed, { tag: 'agree' })!.sdtType).toBe('checkbox');
+  });
+
   test('created control round-trips and stays resolvable by tag', async () => {
     const doc = mkBodyDoc([mkPara('P', mkRun('Hello '), mkRun('NAME'), mkRun('!'))]);
     const { doc: created } = createContentControl(

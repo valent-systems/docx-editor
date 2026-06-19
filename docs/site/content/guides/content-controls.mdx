@@ -183,7 +183,7 @@ setContentControlContent(doc, { tag: 'supplier' }, 'ACME Ltd', { scope: 'all' })
 
 When filling an inline control, the new run inherits the placeholder's formatting, so the value matches the field it replaces.
 
-The same applies to the live-editor `DocxEditorRef` methods (`getContentControls` / `setContentControlContent` / `removeContentControl`), in both React and Vue.
+The live-editor `DocxEditorRef` methods (`getContentControls` / `setContentControlContent` / `removeContentControl`) reach block and inline controls too, in both React and Vue — but the body only. They take no `scope` option, so header/footer controls are addressable headless only.
 
 ## Current limits
 
