@@ -244,6 +244,7 @@ export function convertTable(
     floating: table.formatting?.floating,
     cellMargins: cellMarginsAttr,
     look: table.formatting?.look,
+    bidi: table.formatting?.bidi || undefined,
     _originalFormatting: table.formatting || undefined,
   };
   // Table-property change history (`<w:tblPrChange>`).

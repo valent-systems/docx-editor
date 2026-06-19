@@ -295,6 +295,8 @@ export interface TableAttrs {
   cellMargins?: { top?: number; bottom?: number; left?: number; right?: number };
   /** Table look flags for conditional formatting (w:tblLook) */
   look?: TableLook;
+  /** Bidirectional (w:bidiVisual) */
+  bidi?: boolean;
   /** Original table formatting from DOCX for lossless round-trip serialization */
   _originalFormatting?: TableFormatting;
   /**

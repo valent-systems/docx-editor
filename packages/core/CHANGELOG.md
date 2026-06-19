@@ -1,5 +1,18 @@
 # @eigenpal/docx-editor-core
 
+## 1.8.2
+
+### Patch Changes
+
+- 4f183b3: Fix duplicate comment range markers when commenting across a tracked change. A comment whose range was interrupted by an inserted or deleted run now serializes as a single commentRangeStart/End pair instead of multiple, which Word rejected as unreadable content.
+
+  Fixes #914
+
+- 0c233db: Keep drag-selecting text inside a table cell from selecting the whole cell.
+- 7811a73: Fix caret size and table insert button position when the editor is zoomed. Both are painted inside the zoomed page container, so their geometry is now normalized by the zoom factor instead of being scaled twice.
+
+  Fixes #928
+
 ## 1.8.1
 
 ### Patch Changes

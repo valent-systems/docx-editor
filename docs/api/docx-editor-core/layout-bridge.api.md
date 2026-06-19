@@ -371,7 +371,7 @@ export function getCanvasContext(): CanvasRenderingContext2D;
 export function getCaretPosition(layout: Layout, blocks: FlowBlock[], measures: Measure[], pmPosition: number, startPageIndex?: number): CaretPosition_2 | null;
 
 // @public (undocumented)
-export function getCaretPositionFromDom(container: HTMLElement, pmPos: number, overlayRect: DOMRect): DomCaretPosition | null;
+export function getCaretPositionFromDom(container: HTMLElement, pmPos: number, overlayRect: DOMRect, zoom?: number): DomCaretPosition | null;
 
 // @public
 export function getColumns(sectionProps: SectionProperties | null | undefined): ColumnLayout | undefined;

@@ -30,6 +30,7 @@ export const tableSpec: NodeSpec = {
     floating: { default: null },
     cellMargins: { default: null },
     look: { default: null },
+    bidi: { default: null },
     _originalFormatting: { default: null },
     // Table-property change history (`<w:tblPrChange>`). Round-trip only;
     // accept/reject by id resolves the entry. Serializer clamps to one entry.
@@ -43,6 +44,7 @@ export const tableSpec: NodeSpec = {
         return {
           styleId: element.dataset.styleId || undefined,
           justification: element.dataset.justification as TableAttrs['justification'] | undefined,
+          bidi: element.dataset.bidi === 'true' || element.dir === 'rtl' || undefined,
         };
       },
     },
@@ -55,7 +57,16 @@ export const tableSpec: NodeSpec = {
       domAttrs['data-style-id'] = attrs.styleId;
     }
 
+    if (attrs.bidi) {
+      domAttrs['data-bidi'] = 'true';
+      domAttrs.dir = 'rtl';
+    }
+
     const styles: string[] = ['border-collapse: collapse'];
+
+    if (attrs.bidi) {
+      styles.push('direction: rtl');
+    }
 
     if (attrs.width && attrs.widthType === 'pct') {
       styles.push(`width: ${attrs.width / 50}%`);

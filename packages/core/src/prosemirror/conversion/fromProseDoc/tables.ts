@@ -342,6 +342,9 @@ function tableAttrsToFormatting(attrs: TableAttrs): TableFormatting | undefined 
     if (attrs.look !== (orig.look || undefined)) {
       result.look = attrs.look || undefined;
     }
+    if (attrs.bidi !== (orig.bidi || undefined)) {
+      result.bidi = attrs.bidi || undefined;
+    }
     // Width: check if changed
     const origWidthVal = orig.width?.value;
     const origWidthType = orig.width?.type;
@@ -390,7 +393,8 @@ function tableAttrsToFormatting(attrs: TableAttrs): TableFormatting | undefined 
     attrs.tableLayout ||
     attrs.floating ||
     attrs.cellMargins ||
-    attrs.look;
+    attrs.look ||
+    attrs.bidi;
 
   if (!hasFormatting) {
     return undefined;
@@ -435,6 +439,7 @@ function tableAttrsToFormatting(attrs: TableAttrs): TableFormatting | undefined 
     floating: attrs.floating || undefined,
     cellMargins,
     look: attrs.look || undefined,
+    bidi: attrs.bidi || undefined,
   };
 }
 

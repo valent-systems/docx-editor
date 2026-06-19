@@ -562,7 +562,8 @@ function caretFromSpan(
   spanEl: HTMLElement,
   pmPos: number,
   pmStart: number,
-  overlayRect: DOMRect
+  overlayRect: DOMRect,
+  zoom: number
 ): DomCaretPosition {
   const pageEl = spanEl.closest('.layout-page') as HTMLElement | null;
   const pageIndex = pageEl ? Number(pageEl.dataset.pageNumber || 1) - 1 : 0;
@@ -596,10 +597,15 @@ function caretFromSpan(
   // Word (#748). The collapsed range's rect already reports the per-run
   // font box (and its top is baseline-aligned), so use it; fall back to the
   // line height if the browser returns a zero-height rect.
+  //
+  // `rangeRect` comes from getBoundingClientRect, so its height is in screen
+  // space (scaled by `zoom`); divide it back to layout px so the returned
+  // height matches the offsetHeight-based fallbacks. Consumers paint the caret
+  // inside the zoom-scaled container and so expect layout px (#928).
   return {
     x: rangeRect.left - overlayRect.left,
     y: rangeRect.top - overlayRect.top,
-    height: rangeRect.height || lineHeight,
+    height: rangeRect.height ? rangeRect.height / zoom : lineHeight,
     pageIndex,
   };
 }
@@ -607,7 +613,8 @@ function caretFromSpan(
 export function getCaretPositionFromDom(
   container: HTMLElement,
   pmPos: number,
-  overlayRect: DOMRect
+  overlayRect: DOMRect,
+  zoom: number = 1
 ): DomCaretPosition | null {
   // Body-scoped span lookup so HF spans don't mis-resolve the caret
   // when a body PM position happens to fall within an HF range.
@@ -638,11 +645,11 @@ export function getCaretPositionFromDom(
       }
       continue;
     }
-    return caretFromSpan(spanEl, pmPos, pmStart, overlayRect);
+    return caretFromSpan(spanEl, pmPos, pmStart, overlayRect, zoom);
   }
 
   if (fallback) {
-    return caretFromSpan(fallback, pmPos, fallbackStart, overlayRect);
+    return caretFromSpan(fallback, pmPos, fallbackStart, overlayRect, zoom);
   }
 
   // Check empty paragraphs (prefer an on-window copy here too).
