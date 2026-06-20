@@ -37,6 +37,7 @@ import {
  */
 
 let appended: string[] = [];
+let appendedEls: { tagName: string; textContent?: string }[] = [];
 let presentFamilies: Set<string> = new Set();
 let canvasCount = 0;
 // Swappable so individual tests can defer document.fonts.load resolution.
@@ -63,8 +64,9 @@ const savedDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
 
 function installDom() {
   const head = {
-    appendChild(el: { tagName: string; onload?: (() => void) | null }) {
+    appendChild(el: { tagName: string; textContent?: string; onload?: (() => void) | null }) {
       appended.push(el.tagName);
+      appendedEls.push(el);
       // Simulate a successful stylesheet load so loadFont's success path runs.
       if (el.tagName === 'link' && typeof el.onload === 'function') {
         queueMicrotask(() => el.onload && el.onload());
@@ -92,6 +94,7 @@ function installDom() {
 
 beforeEach(() => {
   appended = [];
+  appendedEls = [];
   presentFamilies = new Set();
   canvasCount = 0;
   fontsLoadImpl = async () => undefined;
@@ -246,5 +249,40 @@ describe('loadFont — in-flight buffer registration', () => {
     expect(ok).toBe(true);
     // The buffer registration satisfied the family — no Google <link>.
     expect(appended.filter((t) => t === 'link')).toHaveLength(0);
+  });
+});
+
+describe('loadFontFromBuffer — family-name escaping', () => {
+  test('a name with `"` and `}` cannot break out of the @font-face rule', async () => {
+    const evil = 'Evil";} * { background: url(//x) } /*';
+    await loadFontFromBuffer(evil, new ArrayBuffer(8));
+    const styleEl = appendedEls.find((el) => el.tagName === 'style');
+    const css = styleEl?.textContent ?? '';
+    // The quote that would close the string is escaped, so the payload stays
+    // inside the font-family value.
+    expect(css).toContain('Evil\\";}');
+    // Exactly one @font-face block — no extra rules injected.
+    expect(css.match(/@font-face/g)).toHaveLength(1);
+  });
+
+  test('a name containing `</style>` does not survive as a literal tag', async () => {
+    await loadFontFromBuffer('X</style><img onerror=1>', new ArrayBuffer(8));
+    const styleEl = appendedEls.find((el) => el.tagName === 'style');
+    const css = styleEl?.textContent ?? '';
+    expect(css).not.toContain('</style>');
+    expect(css).toContain('\\3c /style\\3e ');
+  });
+
+  test('a raw newline in the name cannot terminate the CSS string token', async () => {
+    // Per css-syntax-3 a literal LF/CR/FF inside "..." yields a bad-string-token
+    // and ends the string, re-opening the injection the `"`-escape closed.
+    const evil = 'x\n; } * { background: url(//evil) }';
+    await loadFontFromBuffer(evil, new ArrayBuffer(8));
+    const styleEl = appendedEls.find((el) => el.tagName === 'style');
+    const css = styleEl?.textContent ?? '';
+    // LF is hex-escaped, so the payload stays inside the font-family value.
+    expect(css).toContain('x\\a ; }');
+    expect(css).not.toContain('x\n; }');
+    expect(css.match(/@font-face/g)).toHaveLength(1);
   });
 });

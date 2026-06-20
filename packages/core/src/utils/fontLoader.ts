@@ -541,6 +541,19 @@ export function canRenderFont(fontFamily: string, fallbackFont: string = 'sans-s
   );
 }
 
+// CSS hex escapes (with the mandatory trailing space) for characters that
+// either terminate a CSS string token (LF/CR/FF — bad-string-token per
+// css-syntax-3) or could close a serialized <style> block (< >).
+const CSS_HEX_ESCAPES: Record<string, string> = {
+  '<': '\\3c ',
+  '>': '\\3e ',
+  '\n': '\\a ',
+  '\r': '\\d ',
+  '\f': '\\c ',
+};
+const cssStringEscape = (s: string) =>
+  s.replace(/["\\]/g, '\\$&').replace(/[<>\n\r\f]/g, (c) => CSS_HEX_ESCAPES[c]);
+
 /**
  * Load a font from a raw buffer (e.g., embedded in DOCX)
  *
@@ -592,7 +605,7 @@ export async function loadFontFromBuffer(
       const styleEl = document.createElement('style');
       styleEl.textContent = `
       @font-face {
-        font-family: "${normalizedFamily}";
+        font-family: "${cssStringEscape(normalizedFamily)}";
         src: url(${url}) format('truetype');
         font-weight: ${options?.weight ?? 'normal'};
         font-style: ${style};
@@ -682,7 +695,7 @@ export async function loadFontFromUrl(
       const style = document.createElement('style');
       style.textContent = `
       @font-face {
-        font-family: "${normalizedFamily}";
+        font-family: "${cssStringEscape(normalizedFamily)}";
         src: url(${JSON.stringify(src)}) format('${guessFontFormat(src)}');
         font-weight: ${options?.weight ?? 'normal'};
         font-display: swap;
