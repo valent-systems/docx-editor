@@ -46,6 +46,7 @@ import type {
 import type { StyleMap } from './styleParser';
 import type { NumberingMap } from './numberingParser';
 import { parseParagraph } from './paragraphParser';
+import { BlockMarkerCollector, parseBlockMarker } from './bookmarkParser';
 import {
   findChild,
   findChildren,
@@ -561,8 +562,20 @@ function parseCellContent(
   // Get all child elements
   const elements = tcElement.elements || [];
 
+  // Capture block-level bookmark markers that sit directly between block
+  // elements inside the cell (e.g. `</w:p><w:bookmarkEnd/><w:p>`), which the
+  // (Paragraph | Table) cell content model has no slot for otherwise.
+  const markers = new BlockMarkerCollector();
+
   for (const child of elements) {
     if (!child.name) continue;
+
+    // Block-level bookmark marker between paragraphs/tables in the cell.
+    const marker = parseBlockMarker(child);
+    if (marker) {
+      markers.addMarker(marker);
+      continue;
+    }
 
     const localName = child.name.split(':').pop();
 
@@ -570,13 +583,18 @@ function parseCellContent(
       // Parse paragraph
       const para = parseParagraph(child, styles, theme, numbering, rels, media, options);
       content.push(para);
+      markers.onBlockPushed(para);
     } else if (localName === 'tbl') {
       // Parse nested table (recursive)
       const table = parseTable(child, styles, theme, numbering, rels, media, options);
       content.push(table);
+      markers.onBlockPushed(table);
     }
     // Other content types in cells are rare but could be added
   }
+
+  // Flush any markers buffered after the last block.
+  markers.finalize();
 
   // Ensure at least one empty paragraph (Word requires this)
   if (content.length === 0) {

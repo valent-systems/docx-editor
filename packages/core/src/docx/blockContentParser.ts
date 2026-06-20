@@ -30,6 +30,7 @@ import { findChild, findDeep, getChildElements, getLocalName, type XmlElement } 
 import { parseSdtProperties } from './sdtProperties';
 import { parseParagraph } from './paragraphParser';
 import { parseTable } from './tableParser';
+import { BlockMarkerCollector, parseBlockMarker } from './bookmarkParser';
 import {
   isTextBoxDrawing,
   parseTextBox,
@@ -292,9 +293,21 @@ export function parseBlockContent(
 ): BlockContent[] {
   const content: BlockContent[] = [];
   const children = getChildElements(parent);
+  // Capture block-level bookmark markers that sit directly between block
+  // elements (e.g. `</w:p><w:bookmarkEnd/><w:p>`). They have no slot in the
+  // block content model, so ride them on the adjacent block by position.
+  const markers = new BlockMarkerCollector();
 
   for (const child of children) {
     const name = child.name ?? '';
+
+    // Block-level bookmark marker (w:bookmarkStart / w:bookmarkEnd) sitting
+    // between paragraphs/tables/SDTs.
+    const marker = parseBlockMarker(child);
+    if (marker) {
+      markers.addMarker(marker);
+      continue;
+    }
 
     // Paragraph (w:p)
     if (name === 'w:p' || name.endsWith(':p')) {
@@ -306,20 +319,27 @@ export function parseBlockContent(
       // text-box paragraphs share one counter map.
       resolveBulletMarker(paragraph);
       content.push(paragraph);
+      markers.onBlockPushed(paragraph);
     }
     // Table (w:tbl)
     else if (name === 'w:tbl' || name.endsWith(':tbl')) {
       const table = parseTable(child, styles, theme, numbering, rels, media, options);
       content.push(table);
+      markers.onBlockPushed(table);
     }
     // Structured Document Tag (w:sdt) — preserve as a BlockSdt wrapper so the
     // content control, its properties, and identity survive the round trip.
     else if (name === 'w:sdt' || name.endsWith(':sdt')) {
-      content.push(parseBlockSdt(child, styles, theme, numbering, rels, media, options));
+      const sdt = parseBlockSdt(child, styles, theme, numbering, rels, media, options);
+      content.push(sdt);
+      markers.onBlockPushed(sdt);
     }
     // Section properties (w:sectPr) - handled separately at body level
     // Skip here as we handle it after content parsing
   }
+
+  // Flush any markers buffered after the last block.
+  markers.finalize();
 
   return content;
 }
