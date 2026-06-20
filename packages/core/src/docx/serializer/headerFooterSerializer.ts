@@ -15,6 +15,7 @@ import { serializeParagraph } from './paragraphSerializer';
 import { serializeTable } from './tableSerializer';
 import { serializeBlockSdt } from './sdtSerializer';
 import { serializeWatermark } from './vmlWatermarkSerializer';
+import { wrapBlockMarkers } from './blockMarkerSerializer';
 
 // Minimal namespaces needed for header/footer XML
 const NAMESPACES: Record<string, string> = {
@@ -55,11 +56,11 @@ function buildNamespaceDeclarations(): string {
  */
 function serializeBlock(block: BlockContent): string {
   if (block.type === 'paragraph') {
-    return serializeParagraph(block);
+    return wrapBlockMarkers(block, serializeParagraph(block));
   } else if (block.type === 'table') {
-    return serializeTable(block);
+    return wrapBlockMarkers(block, serializeTable(block));
   } else if (block.type === 'blockSdt') {
-    return serializeBlockSdt(block, serializeBlock);
+    return wrapBlockMarkers(block, serializeBlockSdt(block, serializeBlock));
   }
   return '';
 }
