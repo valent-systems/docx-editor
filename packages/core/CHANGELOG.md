@@ -1,5 +1,25 @@
 # @eigenpal/docx-editor-core
 
+## 1.9.0
+
+### Minor Changes
+
+- 826aa32: Add an `{ all: true }` option to `setContentControlContent`, `setContentControlValue`, and `removeContentControl` to apply the change to every content control matching the filter — across headers and footers with `{ includeHeadersFooters: true }` — instead of only the first. This covers one logical value that recurs under a shared tag (e.g. a name in the body, a running header, and several table cells). The default stays first-match. An `{ all: true }` run is atomic: if any matched control is refused by a lock, type, or data-binding guard, nothing is written unless `{ force: true }`.
+- 826aa32: Add `createContentControl` to wrap a text span (including inside a table cell) in a new content control, returning a new document plus the created control with an auto-assigned unique `w:id`. `setContentControlValue` now sets dropdown/date/checkbox values on inline controls too, including inside table cells and — with `{ includeHeadersFooters: true }` — headers and footers. Date controls serialize their format to `<w:dateFormat>`.
+- 826aa32: Content-control addressing now covers inline (`w:sdt`-in-paragraph) controls, including inside table cells: `findContentControls`, `findContentControl`, `setContentControlContent`, `setContentControlValue`, and `removeContentControl` discover and edit them, and `{ includeHeadersFooters: true }` also reaches headers and footers. Results carry `kind` and `location`. The live-editor `DocxEditorRef` methods (React and Vue) gain the same inline support.
+
+  Because of this, `findContentControls` now returns inline controls in the body that earlier versions skipped — code relying on the old block-only results (counts, first match) should re-check.
+
+### Patch Changes
+
+- 4b47daf: Chinese, Korean, and Japanese documents now render and measure with the matching Noto webfont instead of a system fallback. CJK theme typefaces — by their native or romanized name (e.g. SimSun, Malgun Gothic, PMingLiU, MS Mincho) — map to the corresponding Noto Sans/Serif SC/TC/KR/JP family, and the font loader fetches that family rather than the unresolvable raw name.
+- 9144b69: Harden clipboard HTML paste against script injection and slow-input denial of service. Pasted HTML is now sanitized (via DOMPurify) and parsed into an inert document instead of being assigned to `innerHTML`, so embedded scripts, event handlers, and `javascript:` URLs cannot run. Word comment stripping and Office/Word namespace-tag removal now use linear scans that cannot backtrack on hostile input or leave a stray comment opener behind.
+- 12c1f87: Fix export corruption for comments overlapping tracked changes.
+- 7839ee9: Fix CJK text overflowing the right margin when a document's theme leaves the East Asian font slot empty. The East Asian theme font is now resolved from the document's `w:themeFontLang` (e.g. Japanese → MS Mincho), so line breaking and rendering use the correct font and wrap within the page.
+- 9454c9a: Preserve explicit `nil`/`none` borders on export. A cell that hides the table's default grid by setting `<w:tcBorders>` sides to `nil` no longer loses that override on save, so hidden gridlines stay hidden after a round-trip instead of re-inheriting the table's grid. The same applies to paragraph (`w:pBdr`) and page (`w:pgBorders`) borders, which had the identical bug. Fixes #947.
+- f61435b: Harden `openPrintWindow` to build the print window via DOM APIs instead of `document.write`, so a crafted document title cannot break out into executable markup. The framework-agnostic print helpers are now exported from `@eigenpal/docx-editor-core` as the single source of truth, and the React package re-exports them unchanged.
+- 28876a2: Make regular expressions over file- and library-supplied strings run in linear time and escape quoted font names completely. The variable-detection, plural-message, and core-properties date regexes no longer backtrack polynomially on hostile input, and font family names are now backslash-escaped before being wrapped in a quoted CSS string so a crafted DOCX font name cannot break out of it.
+
 ## 1.8.3
 
 ### Patch Changes
