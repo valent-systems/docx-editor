@@ -381,6 +381,11 @@ function convertTableCell(
       blocks.push(convertParagraph(child, offset, options));
     } else if (child.type.name === 'table') {
       blocks.push(convertTable(child, offset, options));
+    } else if (child.type.name === 'textBox') {
+      // A text box anchored from a run inside this cell rides as a sibling
+      // `textBox` node; render it in the cell's flow (Option A — in-flow, not a
+      // page-level float) so it appears in the editor.
+      blocks.push(convertTextBoxNode(child, offset, options));
     }
     offset += child.nodeSize;
   });

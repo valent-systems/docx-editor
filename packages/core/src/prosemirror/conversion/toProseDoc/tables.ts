@@ -26,7 +26,7 @@ import { resolveColorToHex } from '../../../utils/colorResolver';
 import { mergeTextFormatting } from '../../../utils/textFormattingMerge';
 import type { StyleResolver } from '../../styles';
 import { resolveTextFormatting } from './marks';
-import { convertParagraph } from './paragraph';
+import { convertParagraphWithTextBoxes } from './textbox';
 import { registerTableConverter } from '../tableConverterRegistry';
 
 /**
@@ -751,7 +751,13 @@ function convertTableCell(
   const contentNodes: PMNode[] = [];
   for (const content of cell.content) {
     if (content.type === 'paragraph') {
-      contentNodes.push(convertParagraph(content, styleResolver, undefined, conditionalStyle?.rPr));
+      // Promote the paragraph's anchored text boxes to sibling `textBox` nodes
+      // inside the cell — exactly as the body parser does — so a box anchored
+      // from a run in this cell renders in the editor and survives an in-editor
+      // save, instead of staying buried in the run and being dropped.
+      contentNodes.push(
+        ...convertParagraphWithTextBoxes(content, styleResolver, conditionalStyle?.rPr)
+      );
     } else if (content.type === 'table') {
       // Nested tables - recursively convert
       contentNodes.push(convertTable(content, styleResolver));

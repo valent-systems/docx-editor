@@ -205,12 +205,13 @@ export default [
 
   // renderTable.ts is one cohesive table renderer (row/cell/fragment painting,
   // border + cut-edge geometry, span handling, RTL bidi column mirror, resize
-  // handles). Bumped modestly above the default rather than split, which would
-  // scatter the shared grid/column geometry across files.
+  // handles, in-cell paragraph/table/text-box flow). Bumped modestly above the
+  // default rather than split, which would scatter the shared grid/column
+  // geometry across files.
   {
     files: ['packages/core/src/layout-painter/renderTable.ts'],
     rules: {
-      'max-lines': ['error', { max: 1040, skipBlankLines: false, skipComments: false }],
+      'max-lines': ['error', { max: 1085, skipBlankLines: false, skipComments: false }],
     },
   },
 

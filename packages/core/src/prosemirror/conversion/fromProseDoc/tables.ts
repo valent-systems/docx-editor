@@ -19,9 +19,13 @@ import type {
   TableCellFormatting,
   TableBorders,
   Paragraph,
+  Run,
 } from '../../../types/document';
 import type { TableAttrs, TableRowAttrs, TableCellAttrs } from '../../schema/nodes';
+import type { TextBoxAttrs } from '../../extensions/nodes/TextBoxExtension';
 import { convertPMParagraph } from './paragraph';
+import { convertPMTextBox, convertPMTextBoxRun } from './textbox';
+import { shouldExportTextBoxInsideFollowingParagraph } from '../textBoxAnchors';
 
 function inferTableBorders(rows: TableRow[]): TableBorders | undefined {
   for (const row of rows) {
@@ -494,14 +498,40 @@ function convertPMTableCell(node: PMNode): TableCell {
   const attrs = node.attrs as TableCellAttrs;
   const content: (Paragraph | Table)[] = [];
 
-  // Extract cell content (paragraphs and nested tables)
+  // Anchored text boxes inside the cell ride as sibling `textBox` nodes (see
+  // toProseDoc convertTableCell). Re-attach an anchored box into the following
+  // cell paragraph's runs, mirroring the body's extractBlocks re-anchoring, so
+  // an in-editor save keeps it instead of dropping it.
+  let pendingAnchoredTextBoxRuns: Run[] = [];
+  const flushPendingTextBoxes = (): void => {
+    for (const run of pendingAnchoredTextBoxRuns) {
+      content.push({ type: 'paragraph', content: [run] });
+    }
+    pendingAnchoredTextBoxRuns = [];
+  };
+
+  // Extract cell content (paragraphs, nested tables, anchored text boxes)
   node.forEach((contentNode) => {
     if (contentNode.type.name === 'paragraph') {
-      content.push(convertPMParagraph(contentNode));
+      const paragraph = convertPMParagraph(contentNode);
+      if (pendingAnchoredTextBoxRuns.length > 0) {
+        paragraph.content = [...pendingAnchoredTextBoxRuns, ...paragraph.content];
+        pendingAnchoredTextBoxRuns = [];
+      }
+      content.push(paragraph);
     } else if (contentNode.type.name === 'table') {
+      flushPendingTextBoxes();
       content.push(convertPMTable(contentNode));
+    } else if (contentNode.type.name === 'textBox') {
+      if (shouldExportTextBoxInsideFollowingParagraph(contentNode.attrs as TextBoxAttrs)) {
+        pendingAnchoredTextBoxRuns.push(convertPMTextBoxRun(contentNode));
+      } else {
+        flushPendingTextBoxes();
+        content.push(convertPMTextBox(contentNode));
+      }
     }
   });
+  flushPendingTextBoxes();
 
   const cell: TableCell = {
     type: 'tableCell',
