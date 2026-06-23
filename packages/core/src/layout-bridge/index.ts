@@ -66,11 +66,14 @@ export type { PositionResult } from './clickToPosition';
 export {
   clickToPositionDom as mouseToPosition,
   clickToPositionDom,
+  findPositionInSpan,
   clipRectToTableWindow,
   getSelectionRectsFromDom,
   getCaretPositionFromDom,
 } from './clickToPositionDom';
 export type { DomSelectionRect, DomCaretPosition } from './clickToPositionDom';
+export { syncImeCaretAnchor, resetImeCaretAnchor } from './imeCaretAnchor';
+export type { SyncImeCaretAnchorOptions, VisibleCaretViewportRect } from './imeCaretAnchor';
 export { applyCellSelectionHighlight } from './cellSelectionHighlight';
 
 // Selection rectangles
@@ -108,6 +111,14 @@ export type {
   StabilizeFootnoteLayoutArgs,
   StabilizeFootnoteLayoutResult,
 } from './footnoteLayout';
+
+// Footnote caret + selection overlay — the painted-footnote analogue of the
+// HF caret helpers below. Scoped to a single `.layout-footnote-content`
+// container because footnote PM positions collide across footnotes.
+export {
+  computeFootnoteCaretRectFromView,
+  computeFootnoteSelectionRectsFromView,
+} from './footnoteOverlay';
 
 // Header / footer layout helpers — same pattern as footnote: full pipeline
 // (normalization + conversion) lives in core, with adapter-supplied

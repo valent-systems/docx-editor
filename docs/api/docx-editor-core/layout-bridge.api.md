@@ -99,6 +99,21 @@ export function collectFootnoteRefs(blocks: FlowBlock[]): FootnoteRefLocation[];
 export function columnWidthForSection(config: SectionLayoutConfig): number;
 
 // @public
+export function computeFootnoteCaretRectFromView(view: EditorView, container: HTMLElement): {
+    top: number;
+    left: number;
+    height: number;
+} | null;
+
+// @public
+export function computeFootnoteSelectionRectsFromView(view: EditorView, container: HTMLElement): Array<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+}>;
+
+// @public
 export function computeHfCaretRectFromView(view: EditorView, section: 'header' | 'footer', doc?: globalThis.Document): {
     top: number;
     left: number;
@@ -138,6 +153,7 @@ export type ConvertFootnoteOptions = {
     theme?: Theme | null;
     measureBlocks: MeasureBlocksFn;
     defaultTabStopTwips?: number | null;
+    getFootnotePmDoc?: (footnoteId: number) => Node_2 | null | undefined;
 };
 
 // @public
@@ -249,6 +265,9 @@ export function findBodyPmSpans(container: ParentNode): HTMLElement[];
 
 // @public
 export function findCharacterAtX(x: number, charWidths: number[]): number;
+
+// @public
+export function findPositionInSpan(spanEl: HTMLElement, clientX: number, _clientY: number): number | null;
 
 // @public (undocumented)
 export interface FloatingExclusionRect {
@@ -582,6 +601,9 @@ export function resetBlockIdCounter(): void;
 // @public
 export function resetCanvasContext(): void;
 
+// @public (undocumented)
+export function resetImeCaretAnchor(hiddenHost: HTMLElement | null | undefined): void;
+
 // @internal
 export function resolveCellGrid(tableBlock: TableBlock): ResolvedGridCell[];
 
@@ -691,6 +713,19 @@ export interface StabilizeFootnoteLayoutResult {
 }
 
 // @public
+export function syncImeCaretAnchor(input: SyncImeCaretAnchorOptions): boolean;
+
+// @public (undocumented)
+export interface SyncImeCaretAnchorOptions {
+    // (undocumented)
+    editorView: EditorView | null | undefined;
+    // (undocumented)
+    hiddenHost: HTMLElement | null | undefined;
+    // (undocumented)
+    visibleCaret: VisibleCaretViewportRect | null | undefined;
+}
+
+// @public
 export const TABLE_INSERT_EDGE_PROXIMITY = 30;
 
 // @public (undocumented)
@@ -759,5 +794,13 @@ export function twipsToPixels(twips: number): number;
 
 // @public
 export function twipsToPx(twips: number): number;
+
+// @public (undocumented)
+export interface VisibleCaretViewportRect {
+    // (undocumented)
+    left: number;
+    // (undocumented)
+    top: number;
+}
 
 ```

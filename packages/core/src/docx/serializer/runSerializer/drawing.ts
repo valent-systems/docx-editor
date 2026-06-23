@@ -294,8 +294,9 @@ export function serializeShapeContent(content: ShapeContent): string {
   const cy = shape.size.height;
   const isTextBox = shape.shapeType === 'textBox';
   // Geometry (shapeType) and text presence are orthogonal: a `rect` shape can
-  // still hold a w:txbxContent — and the parser stores ALL parsed text boxes as
-  // `rect`, so gating on geometry drops their text on save. Gate on text.
+  // still carry a w:txbxContent (e.g. AlternateContent>Choice>wps textboxes are
+  // parsed with shapeType:'rect'). Gate text emission on the presence of text,
+  // not on geometry, or every run inside a non-textBox shape is silently dropped.
   const hasText = !!shape.textBody && shape.textBody.content.length > 0;
   const isFloating = shape.wrap && shape.wrap.type !== 'inline';
   const distT = shape.wrap?.distT ?? 0;
@@ -355,6 +356,10 @@ export function serializeShapeContent(content: ShapeContent): string {
   // Build wps:wsp
   const wsp = [
     '<wps:wsp>',
+    // Gate the txBox flag on the SAME condition as the `<wps:txbx>` body above
+    // (text presence), so the two never disagree. `isTextBox` is not used here:
+    // no producer sets `shapeType: 'textBox'` (boxes are stored as `rect`), so
+    // OR-ing it in could only emit `txBox="1"` without a matching `<wps:txbx>`.
     `<wps:cNvSpPr${hasText ? ' txBox="1"' : ''}/>`,
     spPr,
     textBody,
