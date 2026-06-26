@@ -125,6 +125,7 @@ export interface DocxEditorRef {
         text: string;
         author: string;
         search?: string;
+        commentId?: number;
     }) => number | null;
     applyFormatting: (options: {
         paraId: string;
@@ -198,6 +199,7 @@ export interface DocxEditorRef {
         search: string;
         replaceWith: string;
         author: string;
+        revisionId?: number;
     }) => boolean;
     // (undocumented)
     redo: () => boolean;
