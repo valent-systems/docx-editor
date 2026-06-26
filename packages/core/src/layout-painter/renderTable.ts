@@ -17,11 +17,15 @@ import type {
   ParagraphBlock,
   ParagraphMeasure,
   ParagraphFragment,
+  TextBoxBlock,
+  TextBoxMeasure,
+  TextBoxFragment,
 } from '../layout-engine/types';
 import type { RenderContext } from './renderPage';
 import { renderFloatingImagesLayer } from './floatingImageLayer';
 import { floatingImageIsBehindDoc, floatingImageWrapsText } from './floatingImageFlow';
 import { renderParagraphFragment } from './renderParagraph';
+import { renderTextBoxFragment } from './renderTextBox';
 import { measureParagraph, type FloatingImageZone } from '../layout-bridge/measuring';
 import { resolveCellGrid } from '../layout-bridge/tableWidthUtils';
 import { extractCellFloatingImages } from './renderTableCellFloating';
@@ -202,6 +206,36 @@ function renderCellContent(
       }
       contentEl.appendChild(nestedTableEl);
       cumulativeY += effectiveSpaceBefore + ((measure as TableMeasure).totalHeight ?? 0);
+      previousParagraphAfter = 0;
+    } else if (block?.kind === 'textBox' && measure?.kind === 'textBox') {
+      // Anchored cell text box: rendered in-flow (takes vertical space in the
+      // cell) rather than floating at page level.
+      const textBoxBlock = block as TextBoxBlock;
+      const textBoxMeasure = measure as TextBoxMeasure;
+      const effectiveSpaceBefore = previousParagraphAfter;
+      cumulativeY += effectiveSpaceBefore;
+
+      const fragment: TextBoxFragment = {
+        kind: 'textBox',
+        blockId: textBoxBlock.id,
+        x: 0,
+        y: 0,
+        width: textBoxMeasure.width,
+        height: textBoxMeasure.height,
+        pmStart: textBoxBlock.pmStart,
+        pmEnd: textBoxBlock.pmEnd,
+        isFloating: false,
+      };
+      const boxEl = renderTextBoxFragment(fragment, textBoxBlock, textBoxMeasure, context, {
+        document: doc,
+      });
+      // renderTextBoxFragment positions absolutely; override to flow in-cell.
+      boxEl.style.position = 'relative';
+      if (effectiveSpaceBefore > 0) {
+        boxEl.style.marginTop = `${effectiveSpaceBefore}px`;
+      }
+      contentEl.appendChild(boxEl);
+      cumulativeY += textBoxMeasure.height;
       previousParagraphAfter = 0;
     }
   }

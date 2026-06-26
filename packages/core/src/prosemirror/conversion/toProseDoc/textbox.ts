@@ -11,7 +11,14 @@
 
 import type { Node as PMNode } from 'prosemirror-model';
 import { schema } from '../../schema';
-import type { Paragraph, ParagraphContent, Run, TextBox, Shape } from '../../../types/document';
+import type {
+  Paragraph,
+  ParagraphContent,
+  Run,
+  TextBox,
+  Shape,
+  TextFormatting,
+} from '../../../types/document';
 import { emuToPixels } from '../../../docx/imageParser';
 import type { StyleResolver } from '../../styles';
 import { isAnchoredDocxTextBox, textBoxAnchorAttrsFromDocx } from '../textBoxAnchors';
@@ -23,10 +30,11 @@ import { convertParagraph } from './paragraph';
  */
 export function convertParagraphWithTextBoxes(
   block: Paragraph,
-  styleResolver: StyleResolver | null
+  styleResolver: StyleResolver | null,
+  extraRunFormatting?: TextFormatting
 ): PMNode[] {
   const textBoxes = extractTextBoxesFromParagraph(block);
-  const pmParagraph = convertParagraph(block, styleResolver);
+  const pmParagraph = convertParagraph(block, styleResolver, undefined, extraRunFormatting);
   const nodes: PMNode[] = [];
   const isEmptyAfterExtraction = textBoxes.length > 0 && pmParagraph.content.size === 0;
   const { anchored, inFlow } = partitionTextBoxesByAnchor(textBoxes);

@@ -26,7 +26,7 @@ import { resolveColorToHex } from '../../../utils/colorResolver';
 import { mergeTextFormatting } from '../../../utils/textFormattingMerge';
 import type { StyleResolver } from '../../styles';
 import { resolveTextFormatting } from './marks';
-import { convertParagraph } from './paragraph';
+import { convertParagraphWithTextBoxes } from './textbox';
 import { registerTableConverter } from '../tableConverterRegistry';
 
 /**
@@ -759,7 +759,11 @@ function convertTableCell(
   const contentNodes: PMNode[] = [];
   for (const content of cell.content) {
     if (content.type === 'paragraph') {
-      contentNodes.push(convertParagraph(content, styleResolver, undefined, conditionalStyle?.rPr));
+      // Promote anchored text boxes to sibling `textBox` nodes (as the body
+      // does) so a cell box renders and survives save.
+      contentNodes.push(
+        ...convertParagraphWithTextBoxes(content, styleResolver, conditionalStyle?.rPr)
+      );
     } else if (content.type === 'table') {
       // Nested tables - recursively convert
       contentNodes.push(convertTable(content, styleResolver));

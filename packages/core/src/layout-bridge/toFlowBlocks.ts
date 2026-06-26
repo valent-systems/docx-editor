@@ -381,6 +381,9 @@ function convertTableCell(
       blocks.push(convertParagraph(child, offset, options));
     } else if (child.type.name === 'table') {
       blocks.push(convertTable(child, offset, options));
+    } else if (child.type.name === 'textBox') {
+      // Anchored cell text box rides as a sibling node; render it in cell flow.
+      blocks.push(convertTextBoxNode(child, offset, options));
     }
     offset += child.nodeSize;
   });

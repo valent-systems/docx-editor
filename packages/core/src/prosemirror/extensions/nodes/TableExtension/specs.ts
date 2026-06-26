@@ -267,7 +267,9 @@ function buildCellWidthStyles(attrs: TableCellAttrs): string[] {
 }
 
 export const tableCellSpec: NodeSpec = {
-  content: '(paragraph | table)+',
+  // `textBox` lets an anchored cell text box ride as a sibling node (mirrors
+  // the body); without it the box is dropped on open/save.
+  content: '(paragraph | table | textBox)+',
   tableRole: 'cell',
   isolating: true,
   attrs: {
@@ -352,7 +354,8 @@ export const tableCellSpec: NodeSpec = {
 };
 
 export const tableHeaderSpec: NodeSpec = {
-  content: '(paragraph | table)+',
+  // See tableCellSpec: a header cell can likewise host an anchored text box.
+  content: '(paragraph | table | textBox)+',
   tableRole: 'header_cell',
   isolating: true,
   attrs: {
