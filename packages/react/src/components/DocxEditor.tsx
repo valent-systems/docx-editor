@@ -438,6 +438,10 @@ export interface DocxEditorRef {
     author: string;
     /** Optional: anchor to a specific phrase within the paragraph (must be unique). */
     search?: string;
+    /** Optional: adopt an externally-assigned OOXML comment id instead of minting
+     * one — e.g. to mirror a comment an external source-of-truth model already
+     * authored, so both stay addressable by the same id. */
+    commentId?: number;
   }) => number | null;
   /** Reply to an existing comment. Returns the reply comment ID. */
   replyToComment: (commentId: number, text: string, author: string) => number | null;
@@ -451,6 +455,11 @@ export interface DocxEditorRef {
     search: string;
     replaceWith: string;
     author: string;
+    /** Optional: adopt an externally-assigned OOXML revision id (w:id) instead of
+     * minting one — e.g. to mirror a tracked change an external source-of-truth
+     * model already authored, so a later acceptChange/rejectChange resolves it by
+     * the same shared id. */
+    revisionId?: number;
   }) => boolean;
   /** Locate every paragraph containing `query` (case-insensitive substring).
    * Returns a stable handle (paraId + the matched phrase) the agent can pass
