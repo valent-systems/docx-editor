@@ -114,6 +114,12 @@
       "resolveComment": "Inherited via EditorRefLike. Identical signature on both adapters.",
       "setParagraphStyle": "Inherited via EditorRefLike. Identical signature on both adapters."
     },
+    "deferredInVue": {
+      "acceptChange": "React-only. Accepts a tracked change by revision id — a fork addition for the React adapter's tracked-change review flow. No Vue equivalent yet.",
+      "rejectChange": "React-only. Rejects a tracked change by revision id — fork addition for the React adapter's tracked-change review flow. No Vue equivalent yet.",
+      "undo": "React-only. Imperative undo on the React adapter (fork addition). No Vue equivalent yet.",
+      "redo": "React-only. Imperative redo on the React adapter (fork addition). No Vue equivalent yet."
+    },
     "vueExclusive": {
       "destroy": "Vue's component-level imperative teardown. React's DocxEditorRef omits this because React handles unmount automatically; both adapters expose `destroy` via their `renderAsync()` return (DocxEditorHandle from core's EditorHandle base)."
     }
