@@ -4,6 +4,7 @@
 
 import type { TableFormatting, TableRowFormatting, TableCellFormatting } from '../formatting';
 import type { Paragraph } from './paragraph';
+import type { BlockSdt } from './sdt';
 import type { BookmarkStart, BookmarkEnd } from './link';
 import type {
   TablePropertyChange,
@@ -13,10 +14,10 @@ import type {
 } from './trackedChange';
 
 /**
- * Table cell (`w:tc`). Holds nested block content (paragraphs and nested
- * tables), cell-level formatting (borders, shading, vertical merge),
- * tracked property changes, and tracked structural changes for cell
- * insert/delete/merge operations.
+ * Table cell (`w:tc`). Holds nested block content (paragraphs, nested
+ * tables, and block-level content controls), cell-level formatting (borders,
+ * shading, vertical merge), tracked property changes, and tracked structural
+ * changes for cell insert/delete/merge operations.
  */
 export interface TableCell {
   type: 'tableCell';
@@ -26,8 +27,8 @@ export interface TableCell {
   propertyChanges?: TableCellPropertyChange[];
   /** Tracked structural changes (cell insert/delete/merge) */
   structuralChange?: TableStructuralChangeInfo;
-  /** Cell content (paragraphs, tables, etc.) */
-  content: (Paragraph | Table)[];
+  /** Cell content (paragraphs, nested tables, block content controls). */
+  content: (Paragraph | Table | BlockSdt)[];
 }
 
 /**

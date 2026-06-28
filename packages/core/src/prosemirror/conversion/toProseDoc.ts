@@ -39,7 +39,7 @@ import { sdtPropsToAttrs } from './sdtAttrs';
  * `pageBreak` node after a paragraph carrying a rendered page break;
  * header/footer content passes `false`.
  */
-function convertBlocksToNodes(
+export function convertBlocksToNodes(
   blocks: BlockContent[],
   styleResolver: StyleResolver | null,
   theme: Theme | null,

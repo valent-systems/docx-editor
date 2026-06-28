@@ -444,7 +444,7 @@ export function parseBlockContent(
  * recurses through `parseBlockContent` so nested block SDTs, tables, and
  * run-level content inside `w:sdtContent` are preserved rather than flattened.
  */
-function parseBlockSdt(
+export function parseBlockSdt(
   sdt: XmlElement,
   styles: StyleMap | null,
   theme: Theme | null,

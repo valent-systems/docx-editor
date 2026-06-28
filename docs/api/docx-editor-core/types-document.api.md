@@ -1121,7 +1121,7 @@ export interface TableBorders {
 
 // @public
 export interface TableCell {
-    content: (Paragraph | Table)[];
+    content: (Paragraph | Table | BlockSdt)[];
     formatting?: TableCellFormatting;
     propertyChanges?: TableCellPropertyChange[];
     structuralChange?: TableStructuralChangeInfo;

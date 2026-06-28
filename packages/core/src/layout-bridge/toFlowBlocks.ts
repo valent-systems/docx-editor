@@ -365,6 +365,26 @@ function convertParagraph(
 }
 
 /**
+ * Build the {@link SdtGroup} membership record for a `blockSdt` PM node. Shared
+ * so a content control is flattened identically at body and cell level.
+ */
+function buildSdtGroup(node: PMNode, pos: number): SdtGroup {
+  const a = node.attrs as Record<string, unknown>;
+  return {
+    id: `sdt@${pos}`,
+    sdtType: typeof a.sdtType === 'string' ? a.sdtType : 'richText',
+    tag: a.tag != null ? String(a.tag) : undefined,
+    alias: a.alias != null ? String(a.alias) : undefined,
+    lock: a.lock != null ? String(a.lock) : undefined,
+    checked: typeof a.checked === 'boolean' ? a.checked : undefined,
+    bound: a.dataBinding != null ? true : undefined,
+    repeatingItem: /<w15:repeatingSectionItem[\s/>]/.test(String(a.rawPropertiesXml ?? ''))
+      ? true
+      : undefined,
+  };
+}
+
+/**
  * Convert a table cell node.
  */
 function convertTableCell(
@@ -374,18 +394,39 @@ function convertTableCell(
   tableCellMargins?: { top?: number; bottom?: number; left?: number; right?: number }
 ): TableCell {
   const blocks: FlowBlock[] = [];
-  let offset = startPos + 1; // +1 for opening tag
 
-  node.forEach((child) => {
+  // Mirror the body `processNode`: a `blockSdt` is FLATTENED — its children
+  // become ordinary cell flow blocks tagged with the enclosing SDT group(s), so
+  // the whole downstream cell pipeline (measure/layout/paint) handles them with
+  // no new arm. The control stays a real node in the PM doc, so fill-by-tag
+  // still targets it; the `sdtGroups` tag drives the (Phase B) in-cell boundary.
+  const processCellChild = (child: PMNode, pos: number, sdtGroups: SdtGroup[]): void => {
+    if (child.type.name === 'blockSdt') {
+      const childGroups = [...sdtGroups, buildSdtGroup(child, pos)];
+      child.forEach((grandchild, childOffset) => {
+        processCellChild(grandchild, pos + 1 + childOffset, childGroups);
+      });
+      return;
+    }
+    const startLen = blocks.length;
     if (child.type.name === 'paragraph') {
-      blocks.push(convertParagraph(child, offset, options));
+      blocks.push(convertParagraph(child, pos, options));
     } else if (child.type.name === 'table') {
-      blocks.push(convertTable(child, offset, options));
+      blocks.push(convertTable(child, pos, options));
     } else if (child.type.name === 'textBox') {
       // Anchored cell text box rides as a sibling node; render it in cell flow.
-      blocks.push(convertTextBoxNode(child, offset, options));
+      blocks.push(convertTextBoxNode(child, pos, options));
     }
-    offset += child.nodeSize;
+    if (sdtGroups.length > 0) {
+      for (let k = startLen; k < blocks.length; k++) {
+        blocks[k].sdtGroups = sdtGroups;
+      }
+    }
+  };
+
+  node.forEach((child, childOffset) => {
+    // +1 for the cell's opening tag, mirroring the original `startPos + 1` base.
+    processCellChild(child, startPos + 1 + childOffset, []);
   });
 
   const attrs = node.attrs;

@@ -6,6 +6,9 @@
 
 import { Node as Node_2 } from 'prosemirror-model';
 
+// @internal
+export function convertPMBlockSdt(node: Node_2): BlockSdt;
+
 // @public
 export function fromProseDoc(pmDoc: Node_2, baseDocument?: Document_2): Document_2;
 

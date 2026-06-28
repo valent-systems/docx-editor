@@ -276,8 +276,10 @@ function extractBlocks(pmDoc: PMNode): BlockContent[] {
  * Reconstruct a {@link BlockSdt} model node from a `blockSdt` PM node:
  * project the attrs back to {@link SdtProperties} (the captured raw `sdtPr`
  * rides along for lossless serialization) and recurse into the children.
+ *
+ * @internal Exported only so the sibling table converter can reuse it.
  */
-function convertPMBlockSdt(node: PMNode): BlockSdt {
+export function convertPMBlockSdt(node: PMNode): BlockSdt {
   const attrs = node.attrs as Record<string, unknown>;
   const blockSdt: BlockSdt = {
     type: 'blockSdt',

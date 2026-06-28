@@ -39,6 +39,7 @@ import type {
   TableStructuralChangeInfo,
   ConditionalFormatStyle,
   Paragraph,
+  BlockSdt,
   Theme,
   RelationshipMap,
   MediaFile,
@@ -49,7 +50,7 @@ import { parseParagraph } from './paragraphParser';
 // Shared with the body/header/footer parser (blockContentParser): a paragraph
 // inside a table cell needs the same anchored-text-box enrichment pass, or a
 // text box anchored from a run in a cell is dropped at parse.
-import { enrichParagraphTextBoxes } from './blockContentParser';
+import { enrichParagraphTextBoxes, parseBlockSdt } from './blockContentParser';
 import { BlockMarkerCollector, parseBlockMarker } from './bookmarkParser';
 import {
   findChild,
@@ -560,8 +561,8 @@ function parseCellContent(
   rels: RelationshipMap | null,
   media: Map<string, MediaFile> | null,
   options?: { inHeaderFooter?: boolean }
-): (Paragraph | Table)[] {
-  const content: (Paragraph | Table)[] = [];
+): (Paragraph | Table | BlockSdt)[] {
+  const content: (Paragraph | Table | BlockSdt)[] = [];
 
   // Get all child elements
   const elements = tcElement.elements || [];
@@ -597,6 +598,13 @@ function parseCellContent(
       const table = parseTable(child, styles, theme, numbering, rels, media, options);
       content.push(table);
       markers.onBlockPushed(table);
+    } else if (localName === 'sdt') {
+      // Block-level content control inside the cell (e.g. a CLM OptionSet whose
+      // option paragraphs are wrapped as one w:sdt). Mirror the body parser so
+      // the control + its content survive rather than being dropped.
+      const sdt = parseBlockSdt(child, styles, theme, numbering, rels, media, options);
+      content.push(sdt);
+      markers.onBlockPushed(sdt);
     }
     // Other content types in cells are rare but could be added
   }

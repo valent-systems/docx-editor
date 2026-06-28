@@ -19,9 +19,11 @@ import type {
   TableCellFormatting,
   TableBorders,
   Paragraph,
+  BlockSdt,
   Run,
 } from '../../../types/document';
 import type { TableAttrs, TableRowAttrs, TableCellAttrs } from '../../schema/nodes';
+import { convertPMBlockSdt } from '../fromProseDoc';
 import type { TextBoxAttrs } from '../../extensions/nodes/TextBoxExtension';
 import { convertPMParagraph } from './paragraph';
 import { convertPMTextBox, convertPMTextBoxRun } from './textbox';
@@ -513,7 +515,7 @@ function tableRowAttrsToFormatting(attrs: TableRowAttrs): TableRowFormatting | u
  */
 function convertPMTableCell(node: PMNode): TableCell {
   const attrs = node.attrs as TableCellAttrs;
-  const content: (Paragraph | Table)[] = [];
+  const content: (Paragraph | Table | BlockSdt)[] = [];
 
   // Re-attach an anchored cell text box (sibling `textBox` node) into the
   // following paragraph's runs, mirroring the body's extractBlocks.
@@ -537,6 +539,9 @@ function convertPMTableCell(node: PMNode): TableCell {
     } else if (contentNode.type.name === 'table') {
       flushPendingTextBoxes();
       content.push(convertPMTable(contentNode));
+    } else if (contentNode.type.name === 'blockSdt') {
+      flushPendingTextBoxes();
+      content.push(convertPMBlockSdt(contentNode));
     } else if (contentNode.type.name === 'textBox') {
       if (shouldExportTextBoxInsideFollowingParagraph(contentNode.attrs as TextBoxAttrs)) {
         pendingAnchoredTextBoxRuns.push(convertPMTextBoxRun(contentNode));

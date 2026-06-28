@@ -27,6 +27,7 @@ import { mergeTextFormatting } from '../../../utils/textFormattingMerge';
 import type { StyleResolver } from '../../styles';
 import { resolveTextFormatting } from './marks';
 import { convertParagraphWithTextBoxes } from './textbox';
+import { convertBlocksToNodes } from '../toProseDoc';
 import { registerTableConverter } from '../tableConverterRegistry';
 
 /**
@@ -767,6 +768,12 @@ function convertTableCell(
     } else if (content.type === 'table') {
       // Nested tables - recursively convert
       contentNodes.push(convertTable(content, styleResolver));
+    } else if (content.type === 'blockSdt') {
+      // Block-level content control in the cell (e.g. a CLM OptionSet). Reuse the
+      // body-level projection so its paragraphs/tables + sdt props become a real
+      // `blockSdt` PM node. Theme isn't threaded through cells (mirrors the
+      // convertTable call above), so pass null.
+      contentNodes.push(...convertBlocksToNodes([content], styleResolver, null, false));
     }
   }
 

@@ -32,7 +32,10 @@ import type {
   FloatingTableProperties,
   ShadingProperties,
   Paragraph,
+  BlockSdt,
+  BlockContent,
 } from '../../types/document';
+import { serializeBlockSdt } from './sdtSerializer';
 
 import { serializeParagraph } from './paragraphSerializer';
 import { serializeConditionalFormatStyle } from './conditionalFormatSerializer';
@@ -657,18 +660,29 @@ function serializeTableCellPropertyChange(change: TableCellPropertyChange): stri
 // ============================================================================
 
 /**
- * Serialize cell content (paragraphs, nested tables)
+ * Serialize a single cell block (paragraph, nested table, or block content
+ * control). Recurses through a cell-nested `<w:sdt>` via `serializeBlockSdt`,
+ * passing itself as the child serializer (mirrors the body path) so an OptionSet
+ * wrapped around a cell's paragraphs round-trips.
  */
-function serializeCellContent(content: (Paragraph | Table)[]): string {
-  const parts: string[] = [];
-
-  for (const item of content) {
-    if (item.type === 'paragraph') {
-      parts.push(wrapBlockMarkers(item, serializeParagraph(item)));
-    } else if (item.type === 'table') {
-      parts.push(wrapBlockMarkers(item, serializeTable(item)));
-    }
+function serializeCellBlock(item: BlockContent): string {
+  if (item.type === 'paragraph') {
+    return wrapBlockMarkers(item, serializeParagraph(item));
   }
+  if (item.type === 'table') {
+    return wrapBlockMarkers(item, serializeTable(item));
+  }
+  if (item.type === 'blockSdt') {
+    return wrapBlockMarkers(item, serializeBlockSdt(item, serializeCellBlock));
+  }
+  return '';
+}
+
+/**
+ * Serialize cell content (paragraphs, nested tables, block content controls).
+ */
+function serializeCellContent(content: (Paragraph | Table | BlockSdt)[]): string {
+  const parts = content.map(serializeCellBlock).filter((part) => part !== '');
 
   // Ensure at least one empty paragraph (Word requires this)
   if (parts.length === 0) {
