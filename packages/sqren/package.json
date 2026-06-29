@@ -1,6 +1,6 @@
 {
   "name": "@sqren/docx-editor",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Single bundled distribution of the docx-editor fork (read-only DOCX renderer + editor). Bundles @eigenpal/docx-editor-{core,react,i18n,agents} into one package; react/react-dom/prosemirror stay as peer deps.",
   "type": "module",
   "license": "Apache-2.0",
