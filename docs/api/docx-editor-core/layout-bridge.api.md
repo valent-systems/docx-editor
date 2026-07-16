@@ -768,6 +768,7 @@ export type ToFlowBlocksOptions = {
     defaultSize?: number;
     theme?: Theme | null;
     pageContentHeight?: number;
+    frameAlignment?: boolean;
     defaultTabStopTwips?: number;
     listCounters?: Map<number, number[]>;
     listSeenNumIds?: Set<string>;

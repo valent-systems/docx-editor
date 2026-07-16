@@ -374,7 +374,11 @@ export function convertHeaderFooterPmDocToContent(
   metrics: HeaderFooterMetrics,
   options: ConvertHeaderFooterOptions
 ): HeaderFooterContent | undefined {
-  const blocks = toFlowBlocks(pmDoc, { theme: options.theme ?? undefined });
+  // frameAlignment: a framed page number (w:framePr xAlign) aligns by its frame.
+  const blocks = toFlowBlocks(pmDoc, {
+    theme: options.theme ?? undefined,
+    frameAlignment: true,
+  });
   if (blocks.length === 0) return undefined;
 
   const blocksForMeasure = normalizeHeaderFooterMeasureBlocks(blocks);

@@ -338,6 +338,24 @@ function mapTabAlignment(
 /**
  * Convert a paragraph node to a ParagraphBlock.
  */
+/** Map a text-frame `xAlign` (w:framePr) to a paragraph horizontal alignment. */
+function frameXAlignToAlignment(
+  xAlign: string | undefined
+): 'left' | 'center' | 'right' | undefined {
+  switch (xAlign) {
+    case 'center':
+      return 'center';
+    case 'right':
+    case 'outside': // book-binding far margin — approximate
+      return 'right';
+    case 'left':
+    case 'inside': // book-binding near margin — approximate
+      return 'left';
+    default:
+      return undefined;
+  }
+}
+
 function convertParagraph(
   node: PMNode,
   startPos: number,
@@ -352,6 +370,16 @@ function convertParagraph(
     options.listSeenNumIds,
     options.defaultTabStopTwips
   );
+
+  // A framed paragraph (w:framePr) — e.g. a centered page number in a footer —
+  // positions via its frame, which the layout engine doesn't implement. On the
+  // header/footer render path, fall back to the frame's horizontal alignment
+  // when the paragraph has no explicit alignment. Render-only; save is untouched
+  // (framePr round-trips via _originalFormatting).
+  if (options.frameAlignment && !attrs.alignment) {
+    const framed = frameXAlignToAlignment(pmAttrs._originalFormatting?.frame?.xAlign);
+    if (framed) attrs.alignment = framed;
+  }
 
   return {
     kind: 'paragraph',

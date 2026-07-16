@@ -17,6 +17,15 @@ export type ToFlowBlocksOptions = {
   /** Page content height in pixels (pageHeight - marginTop - marginBottom). Images taller than this are scaled down to fit. */
   pageContentHeight?: number;
   /**
+   * Render-only: approximate a framed paragraph's (`w:framePr`) horizontal
+   * alignment (`xAlign`) as paragraph alignment when it has no explicit `w:jc`.
+   * Set by the header/footer render path so a centered/right page number lands
+   * correctly; body layout leaves it unset (framed body paragraphs are rare and
+   * true floating-frame positioning is out of scope). Never affects save — flow
+   * blocks are not serialized.
+   */
+  frameAlignment?: boolean;
+  /**
    * Document-wide `w:defaultTabStop` (§17.6.13) in twips. Stamped onto each
    * paragraph's attrs so the layout-time list-marker helper can snap body
    * text to the default tab grid when no custom `w:tabs` are defined.
