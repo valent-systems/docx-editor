@@ -18,6 +18,7 @@ import {
   type RenderPageOptions,
 } from '../renderPage';
 import type { FootnoteRenderItem } from './footnotes';
+import { selectPageHeaderFooter } from './selectPageHeaderFooter';
 
 type FullPageOptions = RenderPageOptions & {
   footnotesByPage?: Map<number, FootnoteRenderItem[]>;
@@ -39,11 +40,12 @@ function buildPageRenderArgs(
     resolvedCommentIds: options.resolvedCommentIds,
   };
   const pageOptions: RenderPageOptions = { ...options };
-  // Per-page header/footer selection when titlePg is enabled
-  if (options.titlePg && page.number === 1) {
-    pageOptions.headerContent = options.firstPageHeaderContent;
-    pageOptions.footerContent = options.firstPageFooterContent;
-  }
+  // Per-page header/footer selection: a page's own section (multi-section
+  // documents), else the legacy single-section title-page behavior. Absent a
+  // per-section array this is byte-identical to the previous inline logic.
+  const hf = selectPageHeaderFooter(page, options);
+  pageOptions.headerContent = hf.headerContent;
+  pageOptions.footerContent = hf.footerContent;
   if (options.footnotesByPage) {
     const fns = options.footnotesByPage.get(page.number);
     if (fns && fns.length > 0) {
@@ -86,6 +88,10 @@ function computePageFingerprint(page: Page): string {
   );
   parts.push(`n:${page.number}`);
   if (page.footnoteReservedHeight) parts.push(`fn:${page.footnoteReservedHeight}`);
+  // Section identity drives per-section header/footer selection, so a page must
+  // re-render when its section (or section-start role) changes.
+  if (page.sectionIndex != null)
+    parts.push(`sec:${page.sectionIndex}${page.isSectionStart ? 'S' : ''}`);
 
   // Each fragment's stable properties
   for (const frag of page.fragments) {

@@ -934,6 +934,9 @@ export type Page = {
   orientation?: 'portrait' | 'landscape';
   /** Section index this page belongs to. */
   sectionIndex?: number;
+  /** True when this is the first page of its section (drives the title-page
+   *  header/footer variant per section). */
+  isSectionStart?: boolean;
   /** Header/footer references for this page. */
   headerFooterRefs?: {
     headerDefault?: string;

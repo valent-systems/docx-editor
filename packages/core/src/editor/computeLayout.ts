@@ -41,11 +41,13 @@ import {
   extendMarginsForHeaderFooter,
   twipsToPixels,
   type FloatPageGeometry,
+  type SectionHeaderFooter,
 } from '../layout-bridge';
 import {
   pageGeometryFromPage,
   type FootnoteRenderItem,
   type HeaderFooterContent,
+  type SectionHeaderFooterContent,
 } from '../layout-painter';
 import type {
   Document,
@@ -88,6 +90,13 @@ export interface ComputeLayoutInputs {
   footerContent: HeaderFooter | null | undefined;
   firstPageHeaderContent: HeaderFooter | null | undefined;
   firstPageFooterContent: HeaderFooter | null | undefined;
+  /**
+   * Resolved header/footer sets per section, in document order (from
+   * `collectSectionHeaderFooters`). When provided for a multi-section document,
+   * each page renders its own section's header/footer. Omit (or a single entry)
+   * to keep the legacy single-footer behavior.
+   */
+  sectionHeaderFooters?: SectionHeaderFooter[];
   measureBlocks: MeasureBlocksFn;
   /** HF unification: the persistent PM doc for an HF, or null to re-parse content. */
   getHfPmDoc: (hf: HeaderFooter) => PMNode | null | undefined;
@@ -101,6 +110,8 @@ export interface LayoutComputation {
   footerContentForRender: HeaderFooterContent | undefined;
   firstPageHeaderForRender: HeaderFooterContent | undefined;
   firstPageFooterForRender: HeaderFooterContent | undefined;
+  /** Per-section header/footer content (render form), indexed by page.sectionIndex. */
+  sectionHeaderFootersForRender: SectionHeaderFooterContent[] | undefined;
   hasTitlePg: boolean;
   watermark: Watermark | undefined;
   headerDistancePx: number | undefined;
@@ -172,6 +183,7 @@ export function computeLayout(inputs: ComputeLayoutInputs): LayoutComputation {
     footerContent,
     firstPageHeaderContent,
     firstPageFooterContent,
+    sectionHeaderFooters,
     measureBlocks,
     getHfPmDoc,
   } = inputs;
@@ -237,6 +249,20 @@ export function computeLayout(inputs: ComputeLayoutInputs): LayoutComputation {
   const firstPageFooterForRender = hasTitlePg
     ? convertHf(firstPageFooterContent, hfMetricsFooter)
     : undefined;
+
+  // Per-section header/footer content (render form). Only materialized for a
+  // genuinely multi-section document; a single section keeps the legacy
+  // single-footer path (undefined → painter uses the global content).
+  const sectionHeaderFootersForRender: SectionHeaderFooterContent[] | undefined =
+    sectionHeaderFooters && sectionHeaderFooters.length > 1
+      ? sectionHeaderFooters.map((s) => ({
+          header: convertHf(s.header, hfMetricsHeader),
+          footer: convertHf(s.footer, hfMetricsFooter),
+          firstHeader: s.titlePg ? convertHf(s.firstHeader, hfMetricsHeader) : undefined,
+          firstFooter: s.titlePg ? convertHf(s.firstFooter, hfMetricsFooter) : undefined,
+          titlePg: s.titlePg,
+        }))
+      : undefined;
 
   // Watermark rides PM state as a doc attr (so it's undoable).
   const watermark = (state.doc.attrs?.watermark as Watermark | null) ?? undefined;
@@ -323,6 +349,7 @@ export function computeLayout(inputs: ComputeLayoutInputs): LayoutComputation {
     footerContentForRender,
     firstPageHeaderForRender,
     firstPageFooterForRender,
+    sectionHeaderFootersForRender,
     hasTitlePg,
     watermark,
     // Nullish, not truthy: an explicit `w:header="0"` must paint the header at

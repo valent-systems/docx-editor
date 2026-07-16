@@ -15,8 +15,13 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { EditorState } from 'prosemirror-state';
 
-import type { FlowBlock, Layout, Measure } from '@eigenpal/docx-editor-core/layout-engine';
-import { getMargins, getPageSize, getColumns } from '@eigenpal/docx-editor-core/layout-bridge';
+import type { FlowBlock, Layout, Measure } from '@valent/docx-editor-core/layout-engine';
+import {
+  getMargins,
+  getPageSize,
+  getColumns,
+  collectSectionHeaderFooters,
+} from '@valent/docx-editor-core/layout-bridge';
 import type { Node as PMNode } from 'prosemirror-model';
 import {
   LayoutPainter,
@@ -25,20 +30,20 @@ import {
   type BlockLookup,
   type FootnoteRenderItem,
   type RenderPageOptions,
-} from '@eigenpal/docx-editor-core/layout-painter';
+} from '@valent/docx-editor-core/layout-painter';
 import {
   computeLayout,
   createLayoutScheduler,
   type LayoutScheduler,
-} from '@eigenpal/docx-editor-core/editor';
-import { findVerticalScrollParentOrRoot } from '@eigenpal/docx-editor-core/utils/findVerticalScrollParent';
+} from '@valent/docx-editor-core/editor';
+import { findVerticalScrollParentOrRoot } from '@valent/docx-editor-core/utils/findVerticalScrollParent';
 import type {
   Document,
   HeaderFooter,
   SectionProperties,
   StyleDefinitions,
   Theme,
-} from '@eigenpal/docx-editor-core/types/document';
+} from '@valent/docx-editor-core/types/document';
 
 import type { HiddenProseMirrorRef } from '../HiddenProseMirror';
 import type { LayoutSelectionGate } from '../internals/LayoutSelectionGate';
@@ -155,6 +160,9 @@ export function useLayoutPipeline(opts: UseLayoutPipelineOptions): UseLayoutPipe
   }, [layout]);
 
   // Page geometry derived from section properties.
+  // Resolve one header/footer set per section (document order), so a page
+  // renders its own section's footer instead of a single document-global one.
+  const sectionHeaderFooters = useMemo(() => collectSectionHeaderFooters(document), [document]);
   const pageSize = useMemo(() => getPageSize(sectionProperties), [sectionProperties]);
   const margins = useMemo(() => getMargins(sectionProperties), [sectionProperties]);
   const columns = useMemo(() => getColumns(sectionProperties), [sectionProperties]);
@@ -213,7 +221,7 @@ export function useLayoutPipeline(opts: UseLayoutPipelineOptions): UseLayoutPipe
       try {
         // Steps 1-3 (PM doc → blocks → measure → HF resolve → margin extend →
         // layout → footnote items) are the shared compute pass, lifted to
-        // `@eigenpal/docx-editor-core/editor`. Paint + scroll/events stay here.
+        // `@valent/docx-editor-core/editor`. Paint + scroll/events stay here.
         const {
           blocks: newBlocks,
           measures: newMeasures,
@@ -222,6 +230,7 @@ export function useLayoutPipeline(opts: UseLayoutPipelineOptions): UseLayoutPipe
           footerContentForRender,
           firstPageHeaderForRender,
           firstPageFooterForRender,
+          sectionHeaderFootersForRender,
           hasTitlePg,
           watermark,
           headerDistancePx,
@@ -247,6 +256,7 @@ export function useLayoutPipeline(opts: UseLayoutPipelineOptions): UseLayoutPipe
           footerContent,
           firstPageHeaderContent,
           firstPageFooterContent,
+          sectionHeaderFooters,
           measureBlocks,
           getHfPmDoc: (hf) => getHfPmDocRef.current?.(hf) ?? null,
         });
@@ -277,6 +287,7 @@ export function useLayoutPipeline(opts: UseLayoutPipelineOptions): UseLayoutPipe
             footerContent: footerContentForRender,
             firstPageHeaderContent: firstPageHeaderForRender,
             firstPageFooterContent: firstPageFooterForRender,
+            sectionHeaderFootersForRender,
             titlePg: hasTitlePg,
             headerDistance: headerDistancePx,
             footerDistance: footerDistancePx,
@@ -440,6 +451,7 @@ export function useLayoutPipeline(opts: UseLayoutPipelineOptions): UseLayoutPipe
       // changes don't re-trigger the layout effect every render.
       sectionProperties,
       finalSectionProperties,
+      sectionHeaderFooters,
       document,
       resolvedCommentIds,
       getScrollContainer,

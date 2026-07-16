@@ -65,7 +65,12 @@ export {
   type RenderContext,
 };
 export type { RenderPagesUpdateKind };
-export type { HeaderFooterContent, RenderPageOptions, FootnoteRenderItem } from './renderPage';
+export type {
+  HeaderFooterContent,
+  RenderPageOptions,
+  FootnoteRenderItem,
+  SectionHeaderFooterContent,
+} from './renderPage';
 
 // Anchored-object position resolution — shared with the measure pipeline so the
 // reserved float band lines up with where the painter places the object.

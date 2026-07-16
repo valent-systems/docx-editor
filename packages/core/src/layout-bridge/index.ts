@@ -168,3 +168,10 @@ export {
   DEFAULT_BODY_MARGIN_PX,
   DEFAULT_HF_DISTANCE_PX,
 } from './sectionGeometry';
+
+// Per-section header/footer resolution (multi-section documents).
+export {
+  collectSectionHeaderFooters,
+  collectOrderedSectionProperties,
+} from './collectSectionHeaderFooters';
+export type { SectionHeaderFooter } from './collectSectionHeaderFooters';

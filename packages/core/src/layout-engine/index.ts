@@ -46,6 +46,7 @@ import { MIN_WRAP_SEGMENT_WIDTH } from '../layout-bridge/measuring/floatingZones
 import { getParagraphFragmentPmRange } from './paragraphFragmentRange';
 import { balanceTerminalContinuousTextColumns } from './columnBalancing';
 import { getSpacingAfter, getSpacingBefore } from './paragraphSpacing';
+import { assignPageSectionIndices } from './assignPageSectionIndices';
 
 // Default page size (US Letter in pixels at 96 DPI)
 const DEFAULT_PAGE_SIZE = { w: 816, h: 1056 };
@@ -350,6 +351,9 @@ export function layoutDocument(
   if (paginator.pages.length === 0) {
     paginator.getCurrentState();
   }
+
+  // Tag each page with its section so the painter can pick per-section HF.
+  assignPageSectionIndices(paginator.pages, blocks, breakIndices);
 
   return {
     pageSize,

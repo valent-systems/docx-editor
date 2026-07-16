@@ -73,6 +73,7 @@ import {
   type HeaderFooterContent,
   type HeaderFooterLayoutInfo,
 } from './renderPage/headerFooter';
+import type { SectionHeaderFooterContent } from './renderPage/selectPageHeaderFooter';
 import {
   renderFootnoteArea,
   calculateFootnoteAreaRenderHeight,
@@ -91,6 +92,7 @@ export {
   type FloatingImagesLayerOptions,
 } from './floatingImageLayer';
 export type { HeaderFooterContent, HeaderFooterLayoutInfo } from './renderPage/headerFooter';
+export type { SectionHeaderFooterContent } from './renderPage/selectPageHeaderFooter';
 export {
   resolveHeaderFooterFloatingTablePosition,
   resolveHeaderFooterFloatLeft,
@@ -201,6 +203,14 @@ export interface RenderPageOptions {
   firstPageFooterContent?: HeaderFooterContent;
   /** Whether different first page headers/footers are enabled (w:titlePg). */
   titlePg?: boolean;
+  /**
+   * Per-section header/footer content (render form), indexed by
+   * `page.sectionIndex`. When present, a page selects its section's set instead
+   * of the document-global `headerContent`/`footerContent` — restoring correct
+   * per-section headers/footers in multi-section documents. Absent (undefined)
+   * preserves the legacy single-footer behavior exactly.
+   */
+  sectionHeaderFootersForRender?: SectionHeaderFooterContent[];
   /** Distance from page top to header content. */
   headerDistance?: number;
   /** Distance from page bottom to footer content. */
