@@ -1,19 +1,19 @@
 import { useCallback, useRef } from 'react';
-import type { Comment } from '@eigenpal/docx-editor-core/types/content';
-import { DocumentAgent } from '@eigenpal/docx-editor-core/agent';
+import type { Comment } from '@valent/docx-editor-core/types/content';
+import { DocumentAgent } from '@valent/docx-editor-core/agent';
 import {
   injectReplyRangeMarkers,
   injectTCReplyRangeMarkers,
-} from '@eigenpal/docx-editor-core/docx';
+} from '@valent/docx-editor-core/docx';
 import {
   getChangedParagraphIds,
   hasStructuralChanges,
   hasUntrackedChanges,
   clearTrackedChanges,
-} from '@eigenpal/docx-editor-core/prosemirror/extensions';
-import { readDocxFileFromInput, type DocxInput } from '@eigenpal/docx-editor-core/utils';
-import { insertImageFromFile } from '@eigenpal/docx-editor-core/prosemirror/commands';
-import { renderAllPagesNow } from '@eigenpal/docx-editor-core/layout-painter';
+} from '@valent/docx-editor-core/prosemirror/extensions';
+import { readDocxFileFromInput, type DocxInput } from '@valent/docx-editor-core/utils';
+import { insertImageFromFile } from '@valent/docx-editor-core/prosemirror/commands';
+import { renderAllPagesNow } from '@valent/docx-editor-core/layout-painter';
 import type { EditorView } from 'prosemirror-view';
 import type { PagedEditorRef } from '../PagedEditor';
 

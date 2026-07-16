@@ -5,8 +5,8 @@
  * `renderPages` rebuilds the DOM.
  */
 
-import { findBodyPmAnchors } from '@eigenpal/docx-editor-core/layout-bridge';
-import type { Layout } from '@eigenpal/docx-editor-core/layout-engine';
+import { findBodyPmAnchors } from '@valent/docx-editor-core/layout-bridge';
+import type { Layout } from '@valent/docx-editor-core/layout-engine';
 import { VIEWPORT_PADDING_BOTTOM, VIEWPORT_PADDING_TOP } from './styles';
 
 /**

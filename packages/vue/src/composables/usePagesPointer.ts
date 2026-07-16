@@ -14,13 +14,13 @@
 import { onBeforeUnmount, onMounted, ref, shallowRef, type Ref, type ShallowRef } from 'vue';
 import type { EditorView } from 'prosemirror-view';
 import { TextSelection, NodeSelection } from 'prosemirror-state';
-import type { HeaderFooter, BlockContent } from '@eigenpal/docx-editor-core/types/content';
-import type { Document, SectionProperties } from '@eigenpal/docx-editor-core/types/document';
-import { findImageElement } from '@eigenpal/docx-editor-core/layout-painter';
+import type { HeaderFooter, BlockContent } from '@valent/docx-editor-core/types/content';
+import type { Document, SectionProperties } from '@valent/docx-editor-core/types/document';
+import { findImageElement } from '@valent/docx-editor-core/layout-painter';
 import {
   detectTableInsertHover,
   TABLE_INSERT_HIDE_DELAY_MS,
-} from '@eigenpal/docx-editor-core/layout-bridge/tableInsertHover';
+} from '@valent/docx-editor-core/layout-bridge/tableInsertHover';
 import {
   scrollVisiblePositionIntoView as scrollVisiblePositionIntoViewImpl,
   resolvePos as resolvePosImpl,
@@ -28,13 +28,13 @@ import {
   selectParagraph as selectParagraphImpl,
 } from '../utils/domQueries';
 import type { ImageSelectionInfo } from '../components/imageSelectionTypes';
-import type { Layout } from '@eigenpal/docx-editor-core/layout-engine';
+import type { Layout } from '@valent/docx-editor-core/layout-engine';
 import type { HyperlinkPopupData } from '../components/ui/hyperlinkPopupTypes';
 import { useDragAutoScroll } from './useDragAutoScroll';
 import {
   createCellDragTracker,
   findCellPosFromPmPos,
-} from '@eigenpal/docx-editor-core/prosemirror/cellDragSelection';
+} from '@valent/docx-editor-core/prosemirror/cellDragSelection';
 
 type TableResizeApi = {
   tryStartResize: (e: MouseEvent, view: EditorView) => boolean;
@@ -89,7 +89,7 @@ export interface UsePagesPointerOptions {
   syncHfPMs?: () => void;
   /** Resolve the persistent EditorView for an HF instance (for click routing). */
   getHfPmView?: (
-    hf: import('@eigenpal/docx-editor-core/types/content').HeaderFooter
+    hf: import('@valent/docx-editor-core/types/content').HeaderFooter
   ) => import('prosemirror-view').EditorView | null;
   /**
    * Replace the loaded Document — used by HF materialisation to publish a

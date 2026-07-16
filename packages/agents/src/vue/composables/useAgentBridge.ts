@@ -6,8 +6,8 @@
  * ```vue
  * <script setup lang="ts">
  * import { ref } from 'vue';
- * import { useAgentBridge } from '@eigenpal/docx-editor-agents/vue';
- * import type { EditorRefLike } from '@eigenpal/docx-editor-agents/vue';
+ * import { useAgentBridge } from '@valent/docx-editor-agents/vue';
+ * import type { EditorRefLike } from '@valent/docx-editor-agents/vue';
  *
  * const editorRef = ref<EditorRefLike | null>(null);
  * const { executeToolCall, toolSchemas } = useAgentBridge({

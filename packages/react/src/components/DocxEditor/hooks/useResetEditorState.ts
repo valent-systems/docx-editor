@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
-import type { Comment } from '@eigenpal/docx-editor-core/types/content';
-import type { HeadingInfo } from '@eigenpal/docx-editor-core/utils';
+import type { Comment } from '@valent/docx-editor-core/types/content';
+import type { HeadingInfo } from '@valent/docx-editor-core/utils';
 import { EMPTY_ANCHOR_POSITIONS } from '../commentFactories';
 
 /**

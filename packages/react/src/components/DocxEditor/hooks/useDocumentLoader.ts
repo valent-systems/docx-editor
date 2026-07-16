@@ -1,19 +1,19 @@
 import { useCallback, useEffect, useRef } from 'react';
-import type { Document } from '@eigenpal/docx-editor-core/types/document';
-import type { Comment } from '@eigenpal/docx-editor-core/types/content';
-import { parseDocx } from '@eigenpal/docx-editor-core/docx';
-import { DocumentAgent } from '@eigenpal/docx-editor-core/agent';
+import type { Document } from '@valent/docx-editor-core/types/document';
+import type { Comment } from '@valent/docx-editor-core/types/content';
+import { parseDocx } from '@valent/docx-editor-core/docx';
+import { DocumentAgent } from '@valent/docx-editor-core/agent';
 import {
   loadDocumentFonts,
   getRenderableDocumentFonts,
   getEmbeddedFontFamilies,
   type DocxInput,
-} from '@eigenpal/docx-editor-core/utils';
-import type { FontOption } from '@eigenpal/docx-editor-core/utils/fontOptions';
+} from '@valent/docx-editor-core/utils';
+import type { FontOption } from '@valent/docx-editor-core/utils/fontOptions';
 import type { UseHistoryReturn } from '../../../hooks/useHistory';
 import type { PagedEditorRef } from '../PagedEditor';
 import type { CommentIdAllocator } from '../commentFactories';
-import { seedCommentAllocator } from '@eigenpal/docx-editor-core/prosemirror/commentIdAllocator';
+import { seedCommentAllocator } from '@valent/docx-editor-core/prosemirror/commentIdAllocator';
 
 /**
  * Document lifecycle: load buffer / pre-parsed doc, keep the agent in

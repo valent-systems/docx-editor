@@ -115,8 +115,8 @@ import {
   isImageLayoutOptionEnabled,
   type ImageLayoutIconHint,
   type ImageLayoutOptionDef,
-} from '@eigenpal/docx-editor-core/layout-painter';
-import type { ImageLayoutTarget } from '@eigenpal/docx-editor-core/prosemirror/commands';
+} from '@valent/docx-editor-core/layout-painter';
+import type { ImageLayoutTarget } from '@valent/docx-editor-core/prosemirror/commands';
 
 import type {
   ImageContextMenuState,

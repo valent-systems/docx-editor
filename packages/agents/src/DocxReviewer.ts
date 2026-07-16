@@ -1,5 +1,5 @@
-import type { Document, DocumentBody } from '@eigenpal/docx-editor-core/headless';
-import { parseDocx } from '@eigenpal/docx-editor-core/headless';
+import type { Document, DocumentBody } from '@valent/docx-editor-core/headless';
+import { parseDocx } from '@valent/docx-editor-core/headless';
 import type {
   ContentBlock,
   GetContentOptions,
@@ -313,7 +313,7 @@ export class DocxReviewer {
           'Use DocxReviewer.fromBuffer() or pass originalBuffer to the constructor.'
       );
     }
-    const { repackDocx } = await import('@eigenpal/docx-editor-core/headless');
+    const { repackDocx } = await import('@valent/docx-editor-core/headless');
     return repackDocx(this.doc);
   }
 }

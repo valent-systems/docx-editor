@@ -135,7 +135,7 @@ export const wordFeatures: WordFeature[] = [
     roundTrip: 'full',
     tier: 'community',
     notes:
-      'Bidi layout with mirrored alignment; Hebrew locale ships in @eigenpal/docx-editor-i18n.',
+      'Bidi layout with mirrored alignment; Hebrew locale ships in @valent/docx-editor-i18n.',
   },
   {
     id: 'text.effects',
@@ -890,7 +890,7 @@ export const wordFeatures: WordFeature[] = [
     rendering: 'full',
     roundTrip: 'full',
     tier: 'community',
-    notes: 'en, de, fr, he, hi, pl, pt-BR, tr, zh-CN via @eigenpal/docx-editor-i18n.',
+    notes: 'en, de, fr, he, hi, pl, pt-BR, tr, zh-CN via @valent/docx-editor-i18n.',
     docsLink: '/docs/1.x/i18n',
   },
   {

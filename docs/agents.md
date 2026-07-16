@@ -10,13 +10,13 @@ The library owns the panel chrome and chat primitives. **You bring your own agen
 
 | Piece                                                         | Where                                        | Notes                                                       |
 | ------------------------------------------------------------- | -------------------------------------------- | ----------------------------------------------------------- |
-| `<DocxEditor agentPanel>`                                     | `@eigenpal/docx-editor-react`                | Right-hand panel, sparkle toolbar toggle, drag-resize       |
-| `<AgentChatLog>`, `<AgentComposer>`, `<AgentTimeline>`        | `@eigenpal/docx-editor-agents/react`         | Opinionated chat primitives — optional                      |
-| `useDocxAgentTools()`                                         | `@eigenpal/docx-editor-agents/react`         | Tool executor + selection / page context                    |
-| `getToolSchemas()`, `getToolDisplayName()`, `executeToolCall` | `@eigenpal/docx-editor-agents/server`        | OpenAI function-calling format — runtime-agnostic           |
-| `getAiSdkTools()`                                             | `@eigenpal/docx-editor-agents/ai-sdk/server` | **AI SDK only.** Returns `streamText({ tools })` shape      |
-| `toAgentMessages()`                                           | `@eigenpal/docx-editor-agents/ai-sdk/react`  | **AI SDK only.** `useChat` `UIMessage[]` → `AgentMessage[]` |
-| `DocxReviewer`                                                | `@eigenpal/docx-editor-agents` (Node)        | Headless: same toolkit, no editor                           |
+| `<DocxEditor agentPanel>`                                     | `@valent/docx-editor-react`                | Right-hand panel, sparkle toolbar toggle, drag-resize       |
+| `<AgentChatLog>`, `<AgentComposer>`, `<AgentTimeline>`        | `@valent/docx-editor-agents/react`         | Opinionated chat primitives — optional                      |
+| `useDocxAgentTools()`                                         | `@valent/docx-editor-agents/react`         | Tool executor + selection / page context                    |
+| `getToolSchemas()`, `getToolDisplayName()`, `executeToolCall` | `@valent/docx-editor-agents/server`        | OpenAI function-calling format — runtime-agnostic           |
+| `getAiSdkTools()`                                             | `@valent/docx-editor-agents/ai-sdk/server` | **AI SDK only.** Returns `streamText({ tools })` shape      |
+| `toAgentMessages()`                                           | `@valent/docx-editor-agents/ai-sdk/react`  | **AI SDK only.** `useChat` `UIMessage[]` → `AgentMessage[]` |
+| `DocxReviewer`                                                | `@valent/docx-editor-agents` (Node)        | Headless: same toolkit, no editor                           |
 
 The `/ai-sdk/*` subpaths import `ai`. Don't use them if you're not on AI SDK — `ai` is an optional peer dep.
 
@@ -27,7 +27,7 @@ The `/ai-sdk/*` subpaths import `ai`. Don't use them if you're not on AI SDK —
 ### 1. Install
 
 ```bash
-npm i @eigenpal/docx-editor-react @eigenpal/docx-editor-agents \
+npm i @valent/docx-editor-react @valent/docx-editor-agents \
       ai @ai-sdk/react @ai-sdk/openai
 ```
 
@@ -38,8 +38,8 @@ Set `OPENAI_API_KEY`.
 ```ts
 import { streamText, convertToModelMessages, stepCountIs, type UIMessage } from 'ai';
 import { openai } from '@ai-sdk/openai';
-import { type AgentContextSnapshot } from '@eigenpal/docx-editor-agents/server';
-import { getAiSdkTools } from '@eigenpal/docx-editor-agents/ai-sdk/server';
+import { type AgentContextSnapshot } from '@valent/docx-editor-agents/server';
+import { getAiSdkTools } from '@valent/docx-editor-agents/ai-sdk/server';
 
 const tools = getAiSdkTools();
 
@@ -73,18 +73,18 @@ import { useRef, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from 'ai';
-import { type DocxEditorRef } from '@eigenpal/docx-editor-react';
+import { type DocxEditorRef } from '@valent/docx-editor-react';
 import {
   AgentChatLog,
   AgentComposer,
   useDocxAgentTools,
   getToolDisplayName,
   type EditorRefLike,
-} from '@eigenpal/docx-editor-agents/react';
-import { toAgentMessages } from '@eigenpal/docx-editor-agents/ai-sdk/react';
+} from '@valent/docx-editor-agents/react';
+import { toAgentMessages } from '@valent/docx-editor-agents/ai-sdk/react';
 
 const DocxEditor = dynamic(
-  () => import('@eigenpal/docx-editor-react').then((m) => ({ default: m.DocxEditor })),
+  () => import('@valent/docx-editor-react').then((m) => ({ default: m.DocxEditor })),
   { ssr: false }
 );
 
@@ -174,7 +174,7 @@ Don't want AI SDK? Skip the `/ai-sdk/*` imports. The core toolkit is plain OpenA
 ### LangChain (sketch)
 
 ```ts
-import { getToolSchemas, executeToolCall } from '@eigenpal/docx-editor-agents/server';
+import { getToolSchemas, executeToolCall } from '@valent/docx-editor-agents/server';
 import { ChatOpenAI } from '@langchain/openai';
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
@@ -194,7 +194,7 @@ const model = new ChatOpenAI({ model: 'gpt-4o' }).bindTools(tools);
 
 ```ts
 import Anthropic from '@anthropic-ai/sdk';
-import { getToolSchemas } from '@eigenpal/docx-editor-agents/server';
+import { getToolSchemas } from '@valent/docx-editor-agents/server';
 
 const client = new Anthropic();
 const stream = client.messages.stream({
@@ -248,7 +248,7 @@ useDocxAgentTools({ editorRef, exclude: ['suggest_change', 'apply_formatting'] }
 ### Custom tools
 
 ```tsx
-import type { AgentToolDefinition } from '@eigenpal/docx-editor-agents/react';
+import type { AgentToolDefinition } from '@valent/docx-editor-agents/react';
 
 const fetchClause: AgentToolDefinition<{ name: string }> = {
   name: 'fetch_clause_template',
@@ -299,7 +299,7 @@ Panel chrome is intentionally non-customizable so the look stays consistent acro
 ## Headless / Node
 
 ```ts
-import { DocxReviewer } from '@eigenpal/docx-editor-agents';
+import { DocxReviewer } from '@valent/docx-editor-agents';
 
 const reviewer = await DocxReviewer.fromBuffer(buffer, 'AI Reviewer');
 reviewer.addComment(5, 'Liability cap seems too low.');

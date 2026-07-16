@@ -1,15 +1,15 @@
 /**
- * @eigenpal/docx-editor-vue/ui
+ * @valent/docx-editor-vue/ui
  *
  * UI entry point — toolbar primitives, pickers, dialogs.
  * Mirrors `packages/react/src/ui.ts` so consumer code that imports
- * `@eigenpal/docx-editor-react/ui { ColorPicker, FontPicker }` and
- * swaps to `@eigenpal/docx-editor-vue/ui` works without surface
+ * `@valent/docx-editor-react/ui { ColorPicker, FontPicker }` and
+ * swaps to `@valent/docx-editor-vue/ui` works without surface
  * changes.
  *
  * @example
  * ```ts
- * import { Toolbar, FontPicker, ColorPicker } from '@eigenpal/docx-editor-vue/ui';
+ * import { Toolbar, FontPicker, ColorPicker } from '@valent/docx-editor-vue/ui';
  * ```
  *
  * @packageDocumentation
@@ -37,7 +37,7 @@ export { default as ListButtons } from './components/ui/ListButtons.vue';
 // Mirrors React's ui.ts, which surfaces these from ListButtons. The `*.vue`
 // ambient module declares only a default export, so `tsc` can't see the
 // SFC's `<script>`-block re-exports — re-export from core directly instead.
-export { createDefaultListState, type ListState } from '@eigenpal/docx-editor-core/utils/listState';
+export { createDefaultListState, type ListState } from '@valent/docx-editor-core/utils/listState';
 export { default as ZoomControl } from './components/ui/ZoomControl.vue';
 export { default as Tooltip } from './components/ui/Tooltip.vue';
 export { default as LoadingIndicator } from './components/ui/LoadingIndicator.vue';

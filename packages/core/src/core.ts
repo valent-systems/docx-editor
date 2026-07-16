@@ -1,5 +1,5 @@
 /**
- * @eigenpal/docx-editor-core (default entry point)
+ * @valent/docx-editor-core (default entry point)
  *
  * Fat barrel that re-exports the parser, serializer, agent, plugin
  * registry, and the most-used types. No React/DOM imports.
@@ -12,7 +12,7 @@
  *
  * @example
  * ```ts
- * import { parseDocx, serializeDocx, resolveColor } from '@eigenpal/docx-editor-core';
+ * import { parseDocx, serializeDocx, resolveColor } from '@valent/docx-editor-core';
  * ```
  * @packageDocumentation
  * @public

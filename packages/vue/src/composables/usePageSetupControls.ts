@@ -9,13 +9,13 @@
 
 import type { Ref } from 'vue';
 import type { EditorView } from 'prosemirror-view';
-import type { Document, SectionProperties } from '@eigenpal/docx-editor-core/types/document';
+import type { Document, SectionProperties } from '@valent/docx-editor-core/types/document';
 import {
   setIndentLeft,
   setIndentRight,
   setIndentFirstLine,
   removeTabStop,
-} from '@eigenpal/docx-editor-core/prosemirror/commands/paragraph';
+} from '@valent/docx-editor-core/prosemirror/commands/paragraph';
 
 export interface UsePageSetupControlsOptions {
   editorView: Ref<EditorView | null>;

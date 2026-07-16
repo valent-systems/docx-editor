@@ -23,7 +23,7 @@ export {
   parsePageRange,
   formatPageRange,
   isPrintSupported,
-} from '@eigenpal/docx-editor-core';
+} from '@valent/docx-editor-core';
 
 // ============================================================================
 // TYPES

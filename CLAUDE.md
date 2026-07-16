@@ -124,7 +124,7 @@ Stable dataset attrs on painted DOM (CSS, queries, selection map depend on these
 
 Shared React/Vue orchestration lives in core (issue #696, Tier 1) — adapters re-export or delegate, so grepping an adapter lands on a thin wrapper:
 
-| Shared op                           | Core module (in `@eigenpal/docx-editor-core`) |
+| Shared op                           | Core module (in `@valent/docx-editor-core`) |
 | ----------------------------------- | --------------------------------------------- |
 | paraId/text helpers                 | `prosemirror/paraText.ts`                     |
 | ref-API queries (find/selInfo/page) | `prosemirror/queries.ts`                      |
@@ -242,7 +242,7 @@ Release: merge the bot's `chore: release` PR. Publish runs via OIDC, tags, GH re
 
 Branches: `main` = 1.x line. `0.x` = pre-rename maintenance, patch/minor only; it does NOT receive security fixes (see `SECURITY.md` — only 1.x is security-supported).
 
-Packages: `@eigenpal/docx-editor-{react,core,agents,i18n,vue}`, `@eigenpal/nuxt-docx-editor`. All published.
+Packages: `@valent/docx-editor-{react,core,agents,i18n,vue}`, `@valent/nuxt-docx-editor`. All published.
 
 ### Don't
 

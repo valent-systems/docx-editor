@@ -5,27 +5,27 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/@eigenpal/nuxt-docx-editor"><img src="https://img.shields.io/npm/v/@eigenpal/nuxt-docx-editor.svg?style=flat-square&color=3B5BDB" alt="npm version" /></a>
-  <a href="https://www.npmjs.com/package/@eigenpal/nuxt-docx-editor"><img src="https://img.shields.io/npm/dm/@eigenpal/nuxt-docx-editor.svg?style=flat-square&color=3B5BDB" alt="npm downloads" /></a>
+  <a href="https://www.npmjs.com/package/@valent/nuxt-docx-editor"><img src="https://img.shields.io/npm/v/@valent/nuxt-docx-editor.svg?style=flat-square&color=3B5BDB" alt="npm version" /></a>
+  <a href="https://www.npmjs.com/package/@valent/nuxt-docx-editor"><img src="https://img.shields.io/npm/dm/@valent/nuxt-docx-editor.svg?style=flat-square&color=3B5BDB" alt="npm downloads" /></a>
   <a href="https://github.com/eigenpal/docx-editor/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache_2.0-blue.svg?style=flat-square&color=3B5BDB" alt="license" /></a>
   <a href="https://docx-editor.dev/editor"><img src="https://img.shields.io/badge/Live_Demo-3B5BDB?style=flat-square&logo=vercel&logoColor=white" alt="Demo" /></a>
   <a href="https://www.docx-editor.dev/docs"><img src="https://img.shields.io/badge/Docs-3B5BDB?style=flat-square&logo=readthedocs&logoColor=white" alt="Documentation" /></a>
 </p>
 
-# @eigenpal/nuxt-docx-editor
+# @valent/nuxt-docx-editor
 
-Nuxt 3 & 4 module for the [docx-editor](https://docx-editor.dev). Wraps [`@eigenpal/docx-editor-vue`](https://www.npmjs.com/package/@eigenpal/docx-editor-vue) and auto-imports an SSR-safe `<DocxEditor>` component — no manual import, no `<ClientOnly>` boilerplate.
+Nuxt 3 & 4 module for the [docx-editor](https://docx-editor.dev). Wraps [`@valent/docx-editor-vue`](https://www.npmjs.com/package/@valent/docx-editor-vue) and auto-imports an SSR-safe `<DocxEditor>` component — no manual import, no `<ClientOnly>` boilerplate.
 
 ## Quick Start
 
 ```bash
-npm install @eigenpal/nuxt-docx-editor
+npm install @valent/nuxt-docx-editor
 ```
 
 ```ts
 // nuxt.config.ts
 export default defineNuxtConfig({
-  modules: ['@eigenpal/nuxt-docx-editor'],
+  modules: ['@valent/nuxt-docx-editor'],
 });
 ```
 
@@ -53,10 +53,10 @@ That's the whole integration. The module registers `<DocxEditor>` as **client-on
 
 ```ts
 export default defineNuxtConfig({
-  modules: ['@eigenpal/nuxt-docx-editor'],
+  modules: ['@valent/nuxt-docx-editor'],
   docxEditor: {
     prefix: 'Ep', // <EpDocxEditor> instead of <DocxEditor>
-    injectStyles: true, // push @eigenpal/docx-editor-vue/styles.css into nuxt.options.css
+    injectStyles: true, // push @valent/docx-editor-vue/styles.css into nuxt.options.css
   },
 });
 ```
@@ -64,18 +64,18 @@ export default defineNuxtConfig({
 | Option         | Type      | Default | Description                                                            |
 | -------------- | --------- | ------- | ---------------------------------------------------------------------- |
 | `prefix`       | `string`  | `''`    | Component name prefix. `'Ep'` registers `<EpDocxEditor>`.              |
-| `injectStyles` | `boolean` | `true`  | Set `false` to import `@eigenpal/docx-editor-vue/styles.css` yourself. |
+| `injectStyles` | `boolean` | `true`  | Set `false` to import `@valent/docx-editor-vue/styles.css` yourself. |
 
 ## Packages
 
 | Package                                                                                      | Description                                                                                                                                |
 | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| [`@eigenpal/docx-editor-react`](https://www.npmjs.com/package/@eigenpal/docx-editor-react)   | <img src="https://cdn.simpleicons.org/react/61DAFB" width="20" align="middle" /> &nbsp; React adapter. Toolbar, paged editor, plugins.     |
-| [`@eigenpal/docx-editor-vue`](https://www.npmjs.com/package/@eigenpal/docx-editor-vue)       | <img src="https://cdn.simpleicons.org/vuedotjs/4FC08D" width="20" align="middle" /> &nbsp; Vue 3 adapter. Toolbar, paged editor, plugins.  |
-| [`@eigenpal/nuxt-docx-editor`](https://www.npmjs.com/package/@eigenpal/nuxt-docx-editor)     | <img src="https://cdn.simpleicons.org/nuxt/00DC82" width="20" align="middle" /> &nbsp; Nuxt 3 & 4 module wrapping the Vue adapter.         |
-| [`@eigenpal/docx-editor-core`](https://www.npmjs.com/package/@eigenpal/docx-editor-core)     | Framework-agnostic core: OOXML parser, serializer, layout engine, ProseMirror schema. Depend on this if you fork the React or Vue adapter. |
-| [`@eigenpal/docx-editor-i18n`](https://www.npmjs.com/package/@eigenpal/docx-editor-i18n)     | Shared locale strings and types consumed by both adapters.                                                                                 |
-| [`@eigenpal/docx-editor-agents`](https://www.npmjs.com/package/@eigenpal/docx-editor-agents) | Agent SDK and chat UI: framework-agnostic bridge, MCP server, AI SDK adapters, plus React UI.                                              |
+| [`@valent/docx-editor-react`](https://www.npmjs.com/package/@valent/docx-editor-react)   | <img src="https://cdn.simpleicons.org/react/61DAFB" width="20" align="middle" /> &nbsp; React adapter. Toolbar, paged editor, plugins.     |
+| [`@valent/docx-editor-vue`](https://www.npmjs.com/package/@valent/docx-editor-vue)       | <img src="https://cdn.simpleicons.org/vuedotjs/4FC08D" width="20" align="middle" /> &nbsp; Vue 3 adapter. Toolbar, paged editor, plugins.  |
+| [`@valent/nuxt-docx-editor`](https://www.npmjs.com/package/@valent/nuxt-docx-editor)     | <img src="https://cdn.simpleicons.org/nuxt/00DC82" width="20" align="middle" /> &nbsp; Nuxt 3 & 4 module wrapping the Vue adapter.         |
+| [`@valent/docx-editor-core`](https://www.npmjs.com/package/@valent/docx-editor-core)     | Framework-agnostic core: OOXML parser, serializer, layout engine, ProseMirror schema. Depend on this if you fork the React or Vue adapter. |
+| [`@valent/docx-editor-i18n`](https://www.npmjs.com/package/@valent/docx-editor-i18n)     | Shared locale strings and types consumed by both adapters.                                                                                 |
+| [`@valent/docx-editor-agents`](https://www.npmjs.com/package/@valent/docx-editor-agents) | Agent SDK and chat UI: framework-agnostic bridge, MCP server, AI SDK adapters, plus React UI.                                              |
 
 ## Component API
 
@@ -93,14 +93,14 @@ const { save } = useAutoSave(/* ... */);
 
 ## Beyond the component
 
-Other `@eigenpal/docx-editor-vue` surfaces — `renderAsync`, `createEmptyDocument`, the `DocxEditorProps`/`DocxEditorRef` types, and the `/ui`, `/dialogs`, `/plugin-api` subpaths — are not re-exported by this module. Import them from the adapter directly, and add it to your own `dependencies` so the import is explicit:
+Other `@valent/docx-editor-vue` surfaces — `renderAsync`, `createEmptyDocument`, the `DocxEditorProps`/`DocxEditorRef` types, and the `/ui`, `/dialogs`, `/plugin-api` subpaths — are not re-exported by this module. Import them from the adapter directly, and add it to your own `dependencies` so the import is explicit:
 
 ```bash
-npm install @eigenpal/docx-editor-vue
+npm install @valent/docx-editor-vue
 ```
 
 ```ts
-import { renderAsync, createEmptyDocument } from '@eigenpal/docx-editor-vue';
+import { renderAsync, createEmptyDocument } from '@valent/docx-editor-vue';
 ```
 
 ## Contributing

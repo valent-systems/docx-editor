@@ -8,11 +8,11 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import type { CSSProperties } from 'react';
-import type { Style } from '@eigenpal/docx-editor-core/types/document';
+import type { Style } from '@valent/docx-editor-core/types/document';
 import type { TableAction } from './TableToolbar';
 import { MaterialSymbol } from './MaterialSymbol';
 import { useTranslation } from '../../i18n';
-import type { TranslationKey } from '@eigenpal/docx-editor-i18n';
+import type { TranslationKey } from '@valent/docx-editor-i18n';
 
 // ============================================================================
 // PREDEFINED TABLE STYLES

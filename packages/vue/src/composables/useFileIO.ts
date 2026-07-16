@@ -10,9 +10,9 @@
 
 import { ref } from 'vue';
 import type { EditorView } from 'prosemirror-view';
-import { readDocxFileFromInput } from '@eigenpal/docx-editor-core/utils';
-import { insertImageFromFile } from '@eigenpal/docx-editor-core/prosemirror/commands';
-import type { Document } from '@eigenpal/docx-editor-core/types/document';
+import { readDocxFileFromInput } from '@valent/docx-editor-core/utils';
+import { insertImageFromFile } from '@valent/docx-editor-core/prosemirror/commands';
+import type { Document } from '@valent/docx-editor-core/types/document';
 
 export interface UseFileIOOptions {
   /** From useDocxEditor — loads a .docx buffer into the editor. */

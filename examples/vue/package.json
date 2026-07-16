@@ -8,10 +8,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@eigenpal/docx-editor-agents": "workspace:*",
-    "@eigenpal/docx-editor-core": "workspace:*",
-    "@eigenpal/docx-editor-i18n": "workspace:*",
-    "@eigenpal/docx-editor-vue": "workspace:*",
+    "@valent/docx-editor-agents": "workspace:*",
+    "@valent/docx-editor-core": "workspace:*",
+    "@valent/docx-editor-i18n": "workspace:*",
+    "@valent/docx-editor-vue": "workspace:*",
     "vue": "^3.5.0"
   },
   "devDependencies": {

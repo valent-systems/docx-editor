@@ -16,16 +16,16 @@
 
 import type { Ref, ShallowRef } from 'vue';
 import type { EditorView } from 'prosemirror-view';
-import type { Document } from '@eigenpal/docx-editor-core/types/document';
-import type { Comment } from '@eigenpal/docx-editor-core/types/content';
-import type { DocxInput } from '@eigenpal/docx-editor-core/utils';
+import type { Document } from '@valent/docx-editor-core/types/document';
+import type { Comment } from '@valent/docx-editor-core/types/content';
+import type { DocxInput } from '@valent/docx-editor-core/utils';
 import {
   flashParagraphFragmentsByParaId,
   type ScrollToParaIdOptions,
-} from '@eigenpal/docx-editor-core/utils';
-import type { Layout } from '@eigenpal/docx-editor-core/layout-engine';
-import { findPageIndexContainingPmPos } from '@eigenpal/docx-editor-core/layout-engine';
-import { renderAllPagesNow } from '@eigenpal/docx-editor-core/layout-painter';
+} from '@valent/docx-editor-core/utils';
+import type { Layout } from '@valent/docx-editor-core/layout-engine';
+import { findPageIndexContainingPmPos } from '@valent/docx-editor-core/layout-engine';
+import { renderAllPagesNow } from '@valent/docx-editor-core/layout-painter';
 import {
   findContentControlsInPM,
   findContentControlPos,
@@ -33,23 +33,23 @@ import {
   removeContentControlTr,
   setContentControlValueTr,
   type PMContentControl,
-} from '@eigenpal/docx-editor-core/prosemirror';
+} from '@valent/docx-editor-core/prosemirror';
 import {
   ContentControlNotFoundError,
   type ContentControlFilter,
   type ContentControlValue,
-} from '@eigenpal/docx-editor-core/agent';
+} from '@valent/docx-editor-core/agent';
 import {
   findInDocument as findInDocumentImpl,
   getSelectionInfo as getSelectionInfoImpl,
   getPageContent as getPageContentImpl,
 } from '../utils/refApiQueries';
-import { findParaIdRange } from '@eigenpal/docx-editor-core/prosemirror/paraText';
+import { findParaIdRange } from '@valent/docx-editor-core/prosemirror/paraText';
 import {
   findCommentRange,
   findChangeRange,
   clampRangeToDoc,
-} from '@eigenpal/docx-editor-core/prosemirror/queries';
+} from '@valent/docx-editor-core/prosemirror/queries';
 import { TextSelection } from 'prosemirror-state';
 import type { DocxEditorRef } from '../components/DocxEditor/types';
 import type { ApplyFormattingOptions } from './useFormattingActions';
