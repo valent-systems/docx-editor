@@ -441,6 +441,53 @@ const CJK_FONT_ALIASES: Record<string, string> = {
   游明朝: 'ms mincho',
 };
 
+/**
+ * Word face-name weight suffixes → CSS font-weight. Word names weighted faces
+ * by suffixing the family ("Onest SemiBold", "Roboto Light", "Calibri Light");
+ * treating those as literal families breaks both the Google Fonts fetch (no
+ * such family → 400) and local matching. Two-word forms listed squashed —
+ * lookup strips internal spaces.
+ */
+const FONT_WEIGHT_SUFFIXES: Record<string, number> = {
+  thin: 100,
+  hairline: 100,
+  extralight: 200,
+  ultralight: 200,
+  light: 300,
+  semilight: 350,
+  medium: 500,
+  semibold: 600,
+  demibold: 600,
+  extrabold: 800,
+  ultrabold: 800,
+  heavy: 900,
+};
+
+/**
+ * Split a weight-suffixed DOCX face name into its base family and CSS weight
+ * ("Onest SemiBold" → { baseFamily: "Onest", weight: 600 }). Returns null for
+ * names without a recognized suffix. "Bold"/"Black" are deliberately excluded:
+ * genuine families end in them (Arial Black) and Word encodes bold via w:b,
+ * so decomposing them would misresolve more than it fixes.
+ */
+export function decomposeWeightedFontName(
+  docxFontName: string
+): { baseFamily: string; weight: number } | null {
+  const trimmed = docxFontName.trim();
+  const words = trimmed.split(/\s+/);
+  if (words.length < 2) return null;
+  // Try the last two words squashed ("Semi Bold" / "Extra Light"), then one.
+  for (const take of [2, 1]) {
+    if (words.length <= take) continue;
+    const suffix = words.slice(-take).join('').toLowerCase();
+    const weight = FONT_WEIGHT_SUFFIXES[suffix];
+    if (weight !== undefined) {
+      return { baseFamily: words.slice(0, -take).join(' '), weight };
+    }
+  }
+  return null;
+}
+
 export function resolveFontFamily(docxFontName: string): ResolvedFont {
   const normalizedName = docxFontName.trim().toLowerCase();
 
@@ -454,6 +501,23 @@ export function resolveFontFamily(docxFontName: string): ResolvedFont {
       originalFont: docxFontName,
       hasGoogleEquivalent: true,
       singleLineRatio: mapping.singleLineRatio,
+    };
+  }
+
+  // Weight-suffixed face name ("Onest SemiBold", "Calibri Light"): resolve the
+  // BASE family (inheriting its mapping — Calibri Light → Carlito — metrics
+  // and stack) and keep the original name at the head of the stack so a
+  // locally-installed exact face still wins. The loader fetches the base
+  // family (a real Google Fonts family) instead of a 400-ing literal name.
+  const decomposed = decomposeWeightedFontName(docxFontName);
+  if (decomposed) {
+    const base = resolveFontFamily(decomposed.baseFamily);
+    return {
+      googleFont: base.googleFont ?? decomposed.baseFamily,
+      cssFallback: `${quoteFontName(docxFontName)}, ${base.cssFallback}`,
+      originalFont: docxFontName,
+      hasGoogleEquivalent: base.hasGoogleEquivalent,
+      singleLineRatio: base.singleLineRatio,
     };
   }
 

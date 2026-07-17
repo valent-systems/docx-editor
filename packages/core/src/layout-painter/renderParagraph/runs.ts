@@ -20,6 +20,7 @@ import type { RenderContext } from '../renderPage';
 import { isFloatingImageRun } from '../floatingImageFlow';
 import { applyImageVisualAttrs, hasImageVisualAttrs } from '../renderImage';
 import { resolveFontFamily } from '../../utils/fontResolver';
+import { getWeightedFaceWeight } from '../../layout-bridge/measuring/measureContainer';
 import {
   PARAGRAPH_CLASS_NAMES,
   isTextRun,
@@ -52,6 +53,12 @@ function applyRunStyles(
   }
   if (run.bold) {
     element.style.fontWeight = 'bold';
+  } else if (run.fontFamily) {
+    // Weight-suffixed face name ("Onest SemiBold" → 600): paint at the face's
+    // real weight, in lock-step with the canvas measurement in
+    // measureContainer.buildFontString — the dual-renderer rule.
+    const faceWeight = getWeightedFaceWeight(run.fontFamily);
+    if (faceWeight) element.style.fontWeight = String(faceWeight);
   }
   if (run.italic) {
     element.style.fontStyle = 'italic';

@@ -8,10 +8,13 @@
  * - Font availability detection
  */
 
-import { resolveFontFamily } from './fontResolver';
+import { resolveFontFamily, decomposeWeightedFontName } from './fontResolver';
 
 // Track loaded fonts to avoid duplicate requests
 const loadedFonts = new Set<string>();
+
+// Fetched weights per family — lets an explicit-weights request past the dedupe.
+const fetchedWeights = new Map<string, Set<number>>();
 
 // Track fonts currently being loaded
 const loadingFonts = new Map<string, Promise<boolean>>();
@@ -194,13 +197,19 @@ export async function loadFont(
   // Normalize font family name
   const normalizedFamily = fontFamily.trim();
 
-  // Already loaded?
+  // Already loaded? True dedupe only if no uncovered weights are requested.
   if (loadedFonts.has(normalizedFamily)) {
-    return true;
+    const covered = fetchedWeights.get(normalizedFamily);
+    const wanted = options?.weights;
+    if (!wanted || (covered && wanted.every((w) => covered.has(w)))) {
+      return true;
+    }
   }
 
-  // Currently loading? Return existing promise
-  const existingLoad = loadingFonts.get(normalizedFamily);
+  // In-flight dedupe keyed by family+weights (parallel doc-font loads must
+  // not let a weighted request adopt a plain request's promise).
+  const requestKey = `${normalizedFamily}|${options?.weights?.join(',') ?? 'default'}`;
+  const existingLoad = loadingFonts.get(requestKey);
   if (existingLoad) {
     return existingLoad;
   }
@@ -288,6 +297,9 @@ export async function loadFont(
         await waitForFontAvailable(normalizedFamily, 3000);
 
         loadedFonts.add(normalizedFamily);
+        const covered = fetchedWeights.get(normalizedFamily) ?? new Set<number>();
+        for (const w of options?.weights ?? [400, 700]) covered.add(w);
+        fetchedWeights.set(normalizedFamily, covered);
 
         // Notify callbacks
         notifyCallbacks([normalizedFamily]);
@@ -300,7 +312,7 @@ export async function loadFont(
       reportFontError(error, `failed to load "${normalizedFamily}"`);
       return false;
     } finally {
-      loadingFonts.delete(normalizedFamily);
+      loadingFonts.delete(requestKey);
 
       // Check if still loading any fonts (Google or face-based)
       if (loadingFonts.size === 0 && loadingFaces.size === 0) {
@@ -309,7 +321,7 @@ export async function loadFont(
     }
   })();
 
-  loadingFonts.set(normalizedFamily, loadPromise);
+  loadingFonts.set(requestKey, loadPromise);
   return loadPromise;
 }
 
@@ -832,6 +844,12 @@ export async function loadFontWithMapping(fontFamily: string): Promise<boolean> 
   const trimmed = fontFamily.trim();
   const googleFont = getGoogleFontEquivalent(trimmed);
 
+  // Weight-suffixed face ("Onest SemiBold"): fetch its weight too.
+  const decomposed = decomposeWeightedFontName(trimmed);
+  const options = decomposed
+    ? { weights: [...new Set([decomposed.weight, 400, 700])].sort((a, b) => a - b) }
+    : undefined;
+
   // Load the Google Font under its own name (no aliasing).
   // The font resolver provides CSS fallback stacks that list both the
   // original DOCX font and the Google equivalent, so the browser will
@@ -850,7 +868,7 @@ export async function loadFontWithMapping(fontFamily: string): Promise<boolean> 
     ) {
       return true;
     }
-    const result = await loadFont(googleFont);
+    const result = await loadFont(googleFont, options);
     if (result) {
       loadedFonts.add(trimmed);
     }
@@ -858,7 +876,7 @@ export async function loadFontWithMapping(fontFamily: string): Promise<boolean> 
   }
 
   // No mapping needed, load directly
-  return loadFont(googleFont);
+  return loadFont(googleFont, options);
 }
 
 /**
@@ -872,6 +890,7 @@ export async function loadFontWithMapping(fontFamily: string): Promise<boolean> 
  */
 export function __resetFontLoaderState(): void {
   loadedFonts.clear();
+  fetchedWeights.clear();
   loadingFonts.clear();
   loadedFaces.clear();
   loadingFaces.clear();

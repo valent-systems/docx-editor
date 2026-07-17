@@ -11,7 +11,7 @@
  *   falling back to fontSize * 1.0 (OOXML spec default single spacing)
  */
 
-import { resolveFontFamily } from '../../utils/fontResolver';
+import { resolveFontFamily, decomposeWeightedFontName } from '../../utils/fontResolver';
 
 // Constants for OOXML unit conversions
 const TWIPS_PER_INCH = 1440;
@@ -144,9 +144,20 @@ function getResolvedFallback(fontFamily: string): string {
  */
 export function buildFontString(style: FontStyle): string {
   const parts: string[] = [];
+  const fontFamily = style.fontFamily ?? DEFAULT_FONT_FAMILY;
 
   if (style.italic) parts.push('italic');
-  if (style.bold) parts.push('bold');
+  if (style.bold) {
+    parts.push('bold');
+  } else {
+    // Weight-suffixed face name ("Onest SemiBold" → 600): measure at the
+    // face's real weight or every such run is measured with the 400 face's
+    // narrower advance widths and pagination drifts from Word. Must stay in
+    // lock-step with the painted span (renderParagraph applies the same
+    // weight) — the dual-renderer rule.
+    const weight = getWeightedFaceWeight(fontFamily);
+    if (weight) parts.push(String(weight));
+  }
 
   // Convert points to pixels for canvas measurement
   const fontSizePt = style.fontSize ?? DEFAULT_FONT_SIZE;
@@ -154,10 +165,25 @@ export function buildFontString(style: FontStyle): string {
   parts.push(`${fontSizePx}px`);
 
   // Use the font resolver for category-appropriate fallback stacks
-  const fontFamily = style.fontFamily ?? DEFAULT_FONT_FAMILY;
   parts.push(getResolvedFallback(fontFamily));
 
   return parts.join(' ');
+}
+
+// Per-family decomposition cache — buildFontString runs per measured run.
+const weightedFaceCache = new Map<string, number | null>();
+
+/**
+ * CSS weight encoded in a weight-suffixed DOCX face name ("Onest SemiBold" →
+ * 600, "Roboto Light" → 300), or null for plain families.
+ */
+export function getWeightedFaceWeight(fontFamily: string): number | null {
+  let weight = weightedFaceCache.get(fontFamily);
+  if (weight === undefined) {
+    weight = decomposeWeightedFontName(fontFamily)?.weight ?? null;
+    weightedFaceCache.set(fontFamily, weight);
+  }
+  return weight;
 }
 
 /**
