@@ -42,7 +42,7 @@ export default defineConfig(async () => {
           replacement: path.join(monorepoRoot, 'packages/agents/src/server.ts'),
         },
         {
-          find: /^@eigenpal\/docx-editor-agents$/,
+          find: /^@valent\/docx-editor-agents$/,
           replacement: path.join(monorepoRoot, 'packages/agents/src/index.ts'),
         },
         {
@@ -59,12 +59,12 @@ export default defineConfig(async () => {
         },
         // Wildcard alias for deep core imports (e.g. @valent/docx-editor-core/utils/docxInput)
         {
-          find: /^@eigenpal\/docx-editor-core\/(.+)/,
+          find: /^@valent\/docx-editor-core\/(.+)/,
           replacement: path.join(monorepoRoot, 'packages/core/src/$1'),
         },
         // Exact match for bare @valent/docx-editor-core (must come AFTER the prefix match above)
         {
-          find: /^@eigenpal\/docx-editor-core$/,
+          find: /^@valent\/docx-editor-core$/,
           replacement: path.join(monorepoRoot, 'packages/core/src/core.ts'),
         },
         { find: '@', replacement: path.join(monorepoRoot, 'packages/react/src') },

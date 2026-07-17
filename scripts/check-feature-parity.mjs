@@ -104,7 +104,7 @@ function extractFromFile(absPath) {
   const isVue = absPath.endsWith('.vue');
   const isCoreReexport =
     !isVue &&
-    /\bfrom\s+['"]@eigenpal\/docx-editor-core/.test(body) &&
+    /\bfrom\s+['"]@valent\/docx-editor-core/.test(body) &&
     !/\b(function|class|const\s+\w+\s*=\s*[^/])\b/.test(
       body.replace(/from\s+['"][^'"]+['"]/g, '')
     );

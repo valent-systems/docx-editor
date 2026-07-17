@@ -27,12 +27,12 @@ const coreAliases = [
   },
   // Wildcard alias for deep core imports
   {
-    find: /^@eigenpal\/docx-editor-core\/(.+)/,
+    find: /^@valent\/docx-editor-core\/(.+)/,
     replacement: path.join(monorepoRoot, 'packages/core/src/$1'),
   },
   // Exact match for bare @valent/docx-editor-core (must come AFTER prefix match)
   {
-    find: /^@eigenpal\/docx-editor-core$/,
+    find: /^@valent\/docx-editor-core$/,
     replacement: path.join(monorepoRoot, 'packages/core/src/core.ts'),
   },
 ];
@@ -58,7 +58,7 @@ export default defineConfig({
             replacement: path.join(monorepoRoot, 'packages/vue/src/styles/editor.css'),
           },
           {
-            find: /^@eigenpal\/docx-editor-vue$/,
+            find: /^@valent\/docx-editor-vue$/,
             replacement: path.join(monorepoRoot, 'packages/vue/src/index.ts'),
           },
           {
@@ -75,7 +75,7 @@ export default defineConfig({
           },
           // Bare @valent/docx-editor-agents (e.g. for type re-exports)
           {
-            find: /^@eigenpal\/docx-editor-agents$/,
+            find: /^@valent\/docx-editor-agents$/,
             replacement: path.join(monorepoRoot, 'packages/agents/src/index.ts'),
           },
           ...coreAliases,

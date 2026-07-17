@@ -35,13 +35,7 @@ export default defineConfig({
       fileName: (format, name) => `${name}.${format === 'es' ? 'mjs' : 'js'}`,
     },
     rollupOptions: {
-      external: [
-        'vue',
-        '@ai-sdk/vue',
-        'ai',
-        /^@eigenpal\/docx-editor-core(\/.*)?$/,
-        /^prosemirror-/,
-      ],
+      external: ['vue', '@ai-sdk/vue', 'ai', /^@valent\/docx-editor-core(\/.*)?$/, /^prosemirror-/],
     },
     emptyOutDir: false,
     minify: true,

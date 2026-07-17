@@ -48,7 +48,7 @@ export default defineConfig({
       cssFileName: 'docx-editor-vue',
     },
     rollupOptions: {
-      external: ['vue', /^@eigenpal\/docx-editor-core(\/.*)?$/, /^prosemirror-/],
+      external: ['vue', /^@valent\/docx-editor-core(\/.*)?$/, /^prosemirror-/],
     },
     emptyOutDir: true,
   },
