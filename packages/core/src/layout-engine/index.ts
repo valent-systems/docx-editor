@@ -262,10 +262,10 @@ export function layoutDocument(
     // Handle keepNext chains - if this is a chain start, check if chain fits
     const chain = keepNextChains.get(i);
     if (chain && !midChainIndices.has(i)) {
-      const chainHeight = calculateChainHeight(chain, blocks, measures);
       const state = paginator.getCurrentState();
       const availableHeight = paginator.getAvailableHeight();
       const pageContentHeight = state.contentBottom - state.topMargin;
+      const chainHeight = calculateChainHeight(chain, blocks, measures, pageContentHeight);
 
       // Only move to new page if:
       // 1. Chain fits on a blank page (avoid infinite loop for oversized chains)

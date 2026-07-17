@@ -29,7 +29,7 @@ export type BreakDecision = {
 };
 
 // @public
-export function calculateChainHeight(chain: KeepNextChain, blocks: FlowBlock[], measures: Measure[]): number;
+export function calculateChainHeight(chain: KeepNextChain, blocks: FlowBlock[], measures: Measure[], pageContentHeight?: number): number;
 
 // @public
 export type CellBorders = {

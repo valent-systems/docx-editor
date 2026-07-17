@@ -22,6 +22,16 @@ export type KeepNextChain = {
 };
 
 /**
+ * True for a paragraph with no visible content (no runs, or only whitespace
+ * text runs) — a blank spacer line.
+ */
+function isEmptyParagraph(para: ParagraphBlock): boolean {
+  return (para.runs ?? []).every(
+    (run) => run.kind === 'text' && !(run as { text?: string }).text?.trim()
+  );
+}
+
+/**
  * Pre-scan blocks to find all keepNext chains.
  *
  * A keepNext chain is a sequence of consecutive paragraphs with keepNext=true,
@@ -73,13 +83,18 @@ export function computeKeepNextChains(blocks: FlowBlock[]): Map<number, KeepNext
         memberIndices.push(j);
         endIndex = j;
         processed.add(j);
+      } else if (isEmptyParagraph(nextPara)) {
+        // Blank spacer paragraphs ride the chain — the heading is kept with
+        // its real CONTENT, not with an empty line. (Break policy: desktop
+        // Word's cached pagination leaves "heading + blank" at a page
+        // bottom; Google Docs — the presentation our customers reference —
+        // pushes the heading to the next page. Product call 2026-07-17:
+        // match the Google Docs behavior.)
+        memberIndices.push(j);
+        endIndex = j;
+        processed.add(j);
       } else {
-        // Found the anchor - stop here. Deliberately Word-accurate: the
-        // anchor is the immediate next paragraph EVEN IF EMPTY — Word keeps
-        // a keepNext heading with the next paragraph mark, blank or not
-        // (verified against TPX's lastRenderedPageBreak record: Word leaves
-        // "heading + blank" at a page bottom). Chaining through blanks would
-        // push headings Word doesn't push and diverge pagination.
+        // Found the anchor - stop here
         break;
       }
     }
@@ -113,14 +128,29 @@ export function computeKeepNextChains(blocks: FlowBlock[]): Map<number, KeepNext
 }
 
 /**
+ * Fraction of the page content height below which a chain's anchor paragraph
+ * is kept WHOLE with its heading (pushed together to the next page); above
+ * it, only the anchor's first line is reserved and the paragraph fragments
+ * under the heading. Break policy (product call 2026-07-17): matches the
+ * Google Docs presentation — a heading is not stranded above a short section
+ * intro, while a long paragraph still fills the heading's page instead of
+ * leaving a page-sized gap (the anchor-fragment-trailing-spacing regression).
+ */
+const KEEP_WHOLE_ANCHOR_MAX_FRACTION = 1 / 3;
+
+/**
  * Calculate the total height needed to keep a chain together.
  *
- * Includes all chain members plus the first line of the anchor paragraph.
+ * Includes all chain members plus the anchor paragraph — whole when it is
+ * short (≤ KEEP_WHOLE_ANCHOR_MAX_FRACTION of the page content height), first
+ * line only when it is long. Pass `pageContentHeight` to enable the
+ * whole-anchor mode; without it the first-line rule applies.
  */
 export function calculateChainHeight(
   chain: KeepNextChain,
   blocks: FlowBlock[],
-  measures: Measure[]
+  measures: Measure[],
+  pageContentHeight?: number
 ): number {
   let totalHeight = 0;
 
@@ -146,13 +176,20 @@ export function calculateChainHeight(
     totalHeight += spacingAfter;
   }
 
-  // Add first line height of anchor (if any)
+  // Add the anchor paragraph: whole when short (heading + intro travel
+  // together), first line only when long (paragraph fragments under the
+  // heading). See KEEP_WHOLE_ANCHOR_MAX_FRACTION.
   if (chain.anchorIndex !== -1) {
     const anchorMeasure = measures[chain.anchorIndex];
     if (anchorMeasure?.kind === 'paragraph') {
       const anchorPara = anchorMeasure as ParagraphMeasure;
-      if (anchorPara.lines.length > 0) {
-        // Add just the first line height
+      const keepWholeCap =
+        pageContentHeight !== undefined
+          ? pageContentHeight * KEEP_WHOLE_ANCHOR_MAX_FRACTION
+          : -Infinity;
+      if (anchorPara.totalHeight <= keepWholeCap) {
+        totalHeight += anchorPara.totalHeight;
+      } else if (anchorPara.lines.length > 0) {
         totalHeight += anchorPara.lines[0].lineHeight;
       }
     }
