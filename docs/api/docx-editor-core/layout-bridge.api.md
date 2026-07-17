@@ -646,8 +646,10 @@ export interface SectionHeaderFooter {
     firstHeader: HeaderFooter | null;
     // (undocumented)
     footer: HeaderFooter | null;
+    footerDistancePx?: number;
     // (undocumented)
     header: HeaderFooter | null;
+    headerDistancePx?: number;
     titlePg: boolean;
 }
 

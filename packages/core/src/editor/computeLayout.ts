@@ -261,6 +261,8 @@ export function computeLayout(inputs: ComputeLayoutInputs): LayoutComputation {
           firstHeader: s.titlePg ? convertHf(s.firstHeader, hfMetricsHeader) : undefined,
           firstFooter: s.titlePg ? convertHf(s.firstFooter, hfMetricsFooter) : undefined,
           titlePg: s.titlePg,
+          headerDistancePx: s.headerDistancePx,
+          footerDistancePx: s.footerDistancePx,
         }))
       : undefined;
 

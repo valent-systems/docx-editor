@@ -91,5 +91,37 @@ describe('selectPageHeaderFooter', () => {
       });
       expect(sel.footerContent).toBe(globalFooter);
     });
+
+    test("a page carries its own section's header/footer band distances", () => {
+      // Sections legitimately differ (e.g. TPX: 67px cover vs 29px body). A
+      // paragraph-anchored header logo positions off this value, so using one
+      // global distance shoves it off the page top on the larger-distance section.
+      const withDistances: SectionHeaderFooterContent[] = [
+        { footer: coverFooter, titlePg: false, headerDistancePx: 67, footerDistancePx: 15 },
+        { footer: bodyFooter, titlePg: false, headerDistancePx: 29, footerDistancePx: 19 },
+      ];
+      const cover = selectPageHeaderFooter(
+        pg({ number: 1, sectionIndex: 0, isSectionStart: true }),
+        { sectionHeaderFootersForRender: withDistances }
+      );
+      expect(cover.headerDistancePx).toBe(67);
+      expect(cover.footerDistancePx).toBe(15);
+
+      const body = selectPageHeaderFooter(
+        pg({ number: 2, sectionIndex: 1, isSectionStart: true }),
+        { sectionHeaderFootersForRender: withDistances }
+      );
+      expect(body.headerDistancePx).toBe(29);
+      expect(body.footerDistancePx).toBe(19);
+    });
+
+    test('distances stay undefined when the section omits them (global fallback)', () => {
+      const partial: SectionHeaderFooterContent[] = [{ titlePg: false }];
+      const sel = selectPageHeaderFooter(pg({ number: 1, sectionIndex: 0, isSectionStart: true }), {
+        sectionHeaderFootersForRender: partial,
+      });
+      expect(sel.headerDistancePx).toBeUndefined();
+      expect(sel.footerDistancePx).toBeUndefined();
+    });
   });
 });

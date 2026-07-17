@@ -46,6 +46,11 @@ function buildPageRenderArgs(
   const hf = selectPageHeaderFooter(page, options);
   pageOptions.headerContent = hf.headerContent;
   pageOptions.footerContent = hf.footerContent;
+  // A page paints its own section's header/footer band distances (w:pgMar
+  // header/footer differ per section — e.g. a 1008-twip cover vs 432-twip body).
+  // The global option stays as the fallback for sections that omit them.
+  if (hf.headerDistancePx !== undefined) pageOptions.headerDistance = hf.headerDistancePx;
+  if (hf.footerDistancePx !== undefined) pageOptions.footerDistance = hf.footerDistancePx;
   if (options.footnotesByPage) {
     const fns = options.footnotesByPage.get(page.number);
     if (fns && fns.length > 0) {

@@ -26,7 +26,7 @@
  */
 
 import { applySectionInheritance, getDefaultSectionProperties } from '../docx/sectionParser';
-import { resolveHeaderFooter } from './sectionGeometry';
+import { resolveHeaderFooter, twipsToPixels } from './sectionGeometry';
 import type { Document, Section, SectionProperties } from '../types/document';
 import type { BlockContent } from '../types/content';
 import type { HeaderFooter } from '../types/content';
@@ -39,6 +39,17 @@ export interface SectionHeaderFooter {
   firstFooter: HeaderFooter | null;
   /** When true, the section's first page uses the first-page (title) variant. */
   titlePg: boolean;
+  /**
+   * This section's `w:pgMar w:header` distance (px) — where the header band
+   * starts from the page top. Sections legitimately differ (e.g. a cover at
+   * 1008 twips vs body sections at 432), and a paragraph-anchored header logo
+   * with a negative offset is positioned off this value, so using one global
+   * distance pushes it off the page top on sections with a larger distance.
+   * Undefined when the section doesn't specify one.
+   */
+  headerDistancePx?: number;
+  /** This section's `w:pgMar w:footer` distance (px). See headerDistancePx. */
+  footerDistancePx?: number;
 }
 
 /**
@@ -85,5 +96,9 @@ export function collectSectionHeaderFooters(
   return inherited.map((s) => ({
     ...resolveHeaderFooter(document ?? null, s.properties),
     titlePg: s.properties.titlePg === true,
+    headerDistancePx:
+      s.properties.headerDistance != null ? twipsToPixels(s.properties.headerDistance) : undefined,
+    footerDistancePx:
+      s.properties.footerDistance != null ? twipsToPixels(s.properties.footerDistance) : undefined,
   }));
 }

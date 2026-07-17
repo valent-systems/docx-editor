@@ -28,6 +28,15 @@ export interface SectionHeaderFooterContent {
   firstFooter?: HeaderFooterContent;
   /** When true, this section's first page uses the first-page variant. */
   titlePg: boolean;
+  /**
+   * This section's `w:pgMar w:header` / `w:footer` distances (px). Sections
+   * legitimately differ; the page painter must use ITS section's distance or a
+   * paragraph-anchored header image is positioned off the wrong band origin
+   * (e.g. a cover logo pushed off the page top). Undefined = fall back to the
+   * document-global distance.
+   */
+  headerDistancePx?: number;
+  footerDistancePx?: number;
 }
 
 export interface PageHeaderFooterInputs {
@@ -42,6 +51,9 @@ export interface PageHeaderFooterInputs {
 export interface PageHeaderFooterSelection {
   headerContent?: HeaderFooterContent;
   footerContent?: HeaderFooterContent;
+  /** The page's section-specific band distances (px); undefined = global. */
+  headerDistancePx?: number;
+  footerDistancePx?: number;
 }
 
 export function selectPageHeaderFooter(
@@ -56,6 +68,8 @@ export function selectPageHeaderFooter(
       return {
         headerContent: (useFirst ? section.firstHeader : section.header) ?? opts.headerContent,
         footerContent: (useFirst ? section.firstFooter : section.footer) ?? opts.footerContent,
+        headerDistancePx: section.headerDistancePx,
+        footerDistancePx: section.footerDistancePx,
       };
     }
   }

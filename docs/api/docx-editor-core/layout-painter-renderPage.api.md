@@ -321,7 +321,10 @@ export interface SectionHeaderFooterContent {
     // (undocumented)
     footer?: HeaderFooterContent;
     // (undocumented)
+    footerDistancePx?: number;
+    // (undocumented)
     header?: HeaderFooterContent;
+    headerDistancePx?: number;
     titlePg: boolean;
 }
 
