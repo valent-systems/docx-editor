@@ -70,8 +70,10 @@ import {
 import { renderFloatingImagesLayer } from './floatingImageLayer';
 import {
   renderHeaderFooterContent,
+  renderBehindHeaderFooterImagesLayer,
   type HeaderFooterContent,
   type HeaderFooterLayoutInfo,
+  type BehindHeaderFooterImage,
 } from './renderPage/headerFooter';
 import type { SectionHeaderFooterContent } from './renderPage/selectPageHeaderFooter';
 import {
@@ -133,7 +135,8 @@ interface PageFloatingImage {
   wrapText?: 'bothSides' | 'left' | 'right' | 'largest';
   /** Wrap type (square, tight, through, topAndBottom) */
   wrapType?: string;
-  /** wp:srcRect crop fractions [0..1]. */
+  /** `wp:anchor@behindDoc`: paint behind text regardless of wrap type. */
+  behindDoc?: boolean;
   cropTop?: number;
   cropRight?: number;
   cropBottom?: number;
@@ -447,6 +450,7 @@ function extractFloatingImagesFromParagraph(
       pmEnd: imgRun.pmEnd,
       wrapText: imageWrapTextFromCssFloat(imgRun.cssFloat),
       wrapType: imgRun.wrapType,
+      behindDoc: imgRun.behindDoc,
       cropTop: imgRun.cropTop,
       cropRight: imgRun.cropRight,
       cropBottom: imgRun.cropBottom,
@@ -860,6 +864,10 @@ export function renderPage(
 
   pageEl.appendChild(contentEl);
 
+  // `behind` header/footer backgrounds are collected here (page-absolute) and
+  // painted below the body via a layer inserted before contentEl (see end).
+  const behindHfImages: BehindHeaderFooterImage[] = [];
+
   // Render header area (always rendered for hover hint / double-click target)
   {
     const defaultHeaderDistance = 48;
@@ -907,7 +915,8 @@ export function renderPage(
         options.headerContent,
         { ...context, section: 'header', contentWidth: headerContentWidth },
         options,
-        layout
+        layout,
+        behindHfImages
       );
       headerContentEl.style.top = `${-headerVisualTop}px`;
       // Do not clip header containers that include media. Their measured content
@@ -968,7 +977,8 @@ export function renderPage(
         options.footerContent,
         { ...context, section: 'footer', contentWidth: footerContentWidth },
         options,
-        layout
+        layout,
+        behindHfImages
       );
       // The box shrank from `actualFooterHeight` to `interactiveFooterHeight`
       // with its bottom pinned, so its top moved down by the difference. Offset
@@ -985,6 +995,12 @@ export function renderPage(
       footerEl.style.overflow = 'hidden';
     }
     pageEl.appendChild(footerEl);
+  }
+
+  // Paint collected `behind` HF backgrounds beneath the body (DOM order, not
+  // z-index) by inserting the layer before contentEl — like the watermark.
+  if (behindHfImages.length > 0) {
+    pageEl.insertBefore(renderBehindHeaderFooterImagesLayer(behindHfImages, doc), contentEl);
   }
 
   if (pageBorderEl && options.pageBorders?.zOrder !== 'back') {

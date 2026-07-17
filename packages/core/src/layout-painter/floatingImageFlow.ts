@@ -10,8 +10,12 @@ export function floatingImageWrapsText(img: { wrapType?: string }): boolean {
   return !isWrapNone(img.wrapType) && img.wrapType !== 'topAndBottom';
 }
 
-export function floatingImageIsBehindDoc(img: { wrapType?: string }): boolean {
-  return img.wrapType === 'behind';
+export function floatingImageIsBehindDoc(img: { wrapType?: string; behindDoc?: boolean }): boolean {
+  // `behind` wrap folds behindDoc into the wrap type; other wrap types
+  // (tight/square/through) carry it as a separate flag — honor both so a
+  // behind-text image sits under the body text and text boxes regardless of
+  // how its text wrapping is configured.
+  return img.wrapType === 'behind' || img.behindDoc === true;
 }
 
 /**

@@ -196,6 +196,7 @@ export const ImageExtension = createNodeExtension({
       height: { default: null },
       rId: { default: null },
       wrapType: { default: 'inline' },
+      behindDoc: { default: null },
       displayMode: { default: 'inline' },
       cssFloat: { default: null },
       transform: { default: null },

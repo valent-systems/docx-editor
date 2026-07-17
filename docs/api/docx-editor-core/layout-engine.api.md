@@ -284,6 +284,7 @@ export type ImageRun = {
     transform?: string;
     position?: ImageRunPosition;
     wrapType?: string;
+    behindDoc?: boolean;
     displayMode?: 'inline' | 'block' | 'float';
     cssFloat?: 'left' | 'right' | 'none';
     distTop?: number;

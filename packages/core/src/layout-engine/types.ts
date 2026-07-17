@@ -177,6 +177,8 @@ export type ImageRun = {
   position?: ImageRunPosition;
   /** Wrap type from DOCX (inline, square, tight, through, topAndBottom, etc.) */
   wrapType?: string;
+  /** `wp:anchor@behindDoc`: image sits behind text (z-order), any wrap type. */
+  behindDoc?: boolean;
   /** Display mode for CSS rendering */
   displayMode?: 'inline' | 'block' | 'float';
   /** CSS float direction */

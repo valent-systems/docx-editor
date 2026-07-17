@@ -21,6 +21,14 @@ export interface ImageSize {
  */
 export interface ImageWrap {
   type: WrapType;
+  /**
+   * `wp:anchor@behindDoc` — whether the drawing sits *behind* the document text
+   * (z-order), independent of the wrap `type`. For `wrapNone` this is already
+   * folded into `type` (`behind`/`inFront`), but Word also allows it alongside
+   * `wrapTight`/`wrapSquare`/etc., where it must be preserved separately so the
+   * object's z-order (and its round-trip `behindDoc` attr) survive.
+   */
+  behindDoc?: boolean;
   /** Wrap text direction */
   wrapText?: 'bothSides' | 'left' | 'right' | 'largest';
   /** Distance from text */

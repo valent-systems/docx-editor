@@ -161,23 +161,6 @@ export function resolveHeaderFooterFloatLeft(
   return '0';
 }
 
-function applyHeaderFooterFloatHorizontalPosition(
-  img: HTMLImageElement,
-  floatImg: {
-    width: number;
-    position: {
-      horizontal?: { relativeTo?: string; posOffset?: number; align?: string; alignment?: string };
-    };
-  },
-  layout: HeaderFooterLayoutInfo
-): void {
-  img.style.left = resolveHeaderFooterFloatLeft(
-    floatImg.width,
-    floatImg.position.horizontal,
-    layout
-  );
-}
-
 /**
  * Resolve the (left, top) position for a floating table inside a header/
  * footer container, per ECMA-376 §17.4.57. The table's `floating.tblpX/tblpY`
@@ -212,13 +195,36 @@ export function resolveHeaderFooterFloatingTablePosition(
 }
 
 /**
- * Render header or footer content
+ * A `wrapType: 'behind'` floating image lifted out of the header/footer flow so
+ * the caller can paint it in a page-level layer *behind* the body content —
+ * matching Word, where a header/footer background image sits under body text.
+ * Coordinates are page-absolute (px).
+ */
+export interface BehindHeaderFooterImage {
+  src: string;
+  width: number;
+  height: number;
+  alt?: string;
+  left: number;
+  top: number;
+}
+
+/**
+ * Render header or footer content.
+ *
+ * When `behindImagesOut` is supplied, floating images with `wrapType: 'behind'`
+ * are NOT painted in the returned container; instead they are pushed (in
+ * page-absolute coordinates) so the caller can render them beneath the body. A
+ * header background image is a sibling of the body in the DOM and is appended
+ * after it, so left in place it would paint *over* body text (#-hf-behind).
+ * Callers that omit the param keep the legacy in-container behavior.
  */
 export function renderHeaderFooterContent(
   content: HeaderFooterContent,
   context: RenderContext,
   options: RenderPageOptions,
-  layout: HeaderFooterLayoutInfo
+  layout: HeaderFooterLayoutInfo,
+  behindImagesOut?: BehindHeaderFooterImage[]
 ): HTMLElement {
   const doc = options.document ?? document;
   const containerEl = doc.createElement('div');
@@ -233,6 +239,7 @@ export function renderHeaderFooterContent(
     width: number;
     height: number;
     alt?: string;
+    wrapType?: string;
     paragraphY: number; // Y position of the containing paragraph
     position: {
       horizontal?: {
@@ -276,6 +283,7 @@ export function renderHeaderFooterContent(
             width: number;
             height: number;
             alt?: string;
+            wrapType?: string;
             position: {
               horizontal?: {
                 relativeTo?: string;
@@ -296,6 +304,7 @@ export function renderHeaderFooterContent(
             width: imgRun.width,
             height: imgRun.height,
             alt: imgRun.alt,
+            wrapType: imgRun.wrapType,
             paragraphY: paragraphStartY, // Store where this paragraph starts
             position: imgRun.position,
           });
@@ -479,6 +488,28 @@ export function renderHeaderFooterContent(
 
   // Render floating images with absolute positioning
   for (const floatImg of floatingImages) {
+    const relLeft = parseFloat(
+      resolveHeaderFooterFloatLeft(floatImg.width, floatImg.position.horizontal, layout)
+    );
+    const relTop = resolveHeaderFooterFloatTop(floatImg, layout);
+
+    // A `behind` image (wrapNone + behindDoc) is a full-bleed background that
+    // must sit under the *body* text. The header/footer container is a sibling
+    // of the body appended after it, so an image left here paints over the body.
+    // Hand it to the caller (in page-absolute coords) to paint in a behind-body
+    // layer instead. Container origin is (layout.flowLeft, layout.flowTop).
+    if (behindImagesOut && floatImg.wrapType === 'behind') {
+      behindImagesOut.push({
+        src: floatImg.src,
+        width: floatImg.width,
+        height: floatImg.height,
+        alt: floatImg.alt,
+        left: layout.flowLeft + relLeft,
+        top: layout.flowTop + relTop,
+      });
+      continue;
+    }
+
     const img = doc.createElement('img');
     img.src = floatImg.src;
     img.width = floatImg.width;
@@ -495,11 +526,50 @@ export function renderHeaderFooterContent(
     img.style.maxWidth = 'none';
     img.style.maxHeight = 'none';
 
-    applyHeaderFooterFloatHorizontalPosition(img, floatImg, layout);
-    img.style.top = `${resolveHeaderFooterFloatTop(floatImg, layout)}px`;
+    img.style.left = `${relLeft}px`;
+    img.style.top = `${relTop}px`;
 
     containerEl.appendChild(img);
   }
 
   return containerEl;
+}
+
+/**
+ * Paint page-level "behind body" header/footer images into a single layer.
+ * The layer is inserted before the body content so DOM order keeps it beneath
+ * body text (the same technique the watermark layer uses), matching Word.
+ */
+export function renderBehindHeaderFooterImagesLayer(
+  images: BehindHeaderFooterImage[],
+  doc: Document
+): HTMLElement {
+  const layer = doc.createElement('div');
+  layer.className = 'layout-hf-behind-layer';
+  layer.style.position = 'absolute';
+  layer.style.top = '0';
+  layer.style.left = '0';
+  layer.style.width = '100%';
+  layer.style.height = '100%';
+  layer.style.pointerEvents = 'none';
+  layer.style.overflow = 'hidden';
+
+  for (const image of images) {
+    const img = doc.createElement('img');
+    img.src = image.src;
+    img.width = image.width;
+    img.height = image.height;
+    if (image.alt) img.alt = image.alt;
+    img.style.position = 'absolute';
+    img.style.display = 'block';
+    img.style.left = `${image.left}px`;
+    img.style.top = `${image.top}px`;
+    img.style.width = `${image.width}px`;
+    img.style.height = `${image.height}px`;
+    img.style.maxWidth = 'none';
+    img.style.maxHeight = 'none';
+    layer.appendChild(img);
+  }
+
+  return layer;
 }

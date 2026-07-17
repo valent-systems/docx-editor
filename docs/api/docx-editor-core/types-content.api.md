@@ -306,6 +306,7 @@ export interface ImageTransform {
 
 // @public
 export interface ImageWrap {
+    behindDoc?: boolean;
     // (undocumented)
     distB?: number;
     // (undocumented)

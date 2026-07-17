@@ -257,8 +257,10 @@ export function serializeDrawingContent(content: DrawingContent): string {
     ].join('');
   }
 
-  // Floating (anchored) image
-  const behindDoc = image.wrap.type === 'behind' ? '1' : '0';
+  // Floating (anchored) image. `behindDoc` is a first-class flag (preserved for
+  // every wrap type); fall back to deriving it from the `behind` wrap type for
+  // models built before it was tracked.
+  const behindDoc = (image.wrap.behindDoc ?? image.wrap.type === 'behind') ? '1' : '0';
   const position = image.position
     ? serializePosition(image.position)
     : '<wp:positionH relativeFrom="column"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom="paragraph"><wp:posOffset>0</wp:posOffset></wp:positionV>';

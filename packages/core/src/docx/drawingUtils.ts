@@ -345,6 +345,11 @@ export function parseWrapElement(
 
   const wrap: ImageWrap = { type };
 
+  // Preserve behindDoc as a first-class flag. For wrapNone it's already encoded
+  // in `type` (behind/inFront); for the other wrap types Word still honors it
+  // for z-order, so keep it so the object renders behind text and round-trips.
+  if (behindDoc) wrap.behindDoc = true;
+
   const wrapText = getAttribute(wrapEl, null, 'wrapText');
   if (wrapText) wrap.wrapText = wrapText as ImageWrap['wrapText'];
 

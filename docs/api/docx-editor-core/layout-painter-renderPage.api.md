@@ -69,6 +69,7 @@ export class f {
 // @public (undocumented)
 export function floatingImageIsBehindDoc(img: {
     wrapType?: string;
+    behindDoc?: boolean;
 }): boolean;
 
 // @public

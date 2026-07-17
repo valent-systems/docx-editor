@@ -218,6 +218,7 @@ export function createImageRun(node: PMNode): Run {
   const wrapType = attrs.wrapType || 'inline';
 
   const wrap: import('../../../types/content').ImageWrap = { type: wrapType };
+  if (attrs.behindDoc) wrap.behindDoc = true;
   if (attrs.distTop !== undefined) wrap.distT = pixelsToEmu(attrs.distTop);
   if (attrs.distBottom !== undefined) wrap.distB = pixelsToEmu(attrs.distBottom);
   if (attrs.distLeft !== undefined) wrap.distL = pixelsToEmu(attrs.distLeft);

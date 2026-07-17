@@ -374,6 +374,7 @@ function convertImage(image: Image): PMNode {
     height: heightPx,
     rId: image.rId,
     wrapType: wrapType,
+    behindDoc: image.wrap.behindDoc ?? undefined,
     displayMode: displayMode,
     cssFloat: cssFloat,
     transform: transform,

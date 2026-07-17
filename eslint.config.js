@@ -193,13 +193,13 @@ export default [
 
   // layout-engine/types.ts is the canonical schema definition for the
   // layout model — single file by design (cross-referencing types). Bumped
-  // modestly above the default to accommodate new revision-tracking and
-  // table-pagination fields without forcing a split that would obscure the
-  // schema.
+  // modestly above the default to accommodate new revision-tracking,
+  // table-pagination and behindDoc z-order fields without forcing a split that
+  // would obscure the schema.
   {
     files: ['packages/core/src/layout-engine/types.ts'],
     rules: {
-      'max-lines': ['error', { max: 1085, skipBlankLines: false, skipComments: false }],
+      'max-lines': ['error', { max: 1090, skipBlankLines: false, skipComments: false }],
     },
   },
 
@@ -211,6 +211,17 @@ export default [
     files: ['packages/core/src/layout-painter/renderTable.ts'],
     rules: {
       'max-lines': ['error', { max: 1040, skipBlankLines: false, skipComments: false }],
+    },
+  },
+
+  // renderPage.ts is the single page-assembly entry point (watermark, body
+  // flow, floating-image extraction, header/footer + behind-text layers, page
+  // borders, footnotes). Bumped modestly above the default rather than split,
+  // which would fragment the page-level z-order stacking it exists to own.
+  {
+    files: ['packages/core/src/layout-painter/renderPage.ts'],
+    rules: {
+      'max-lines': ['error', { max: 1020, skipBlankLines: false, skipComments: false }],
     },
   },
 

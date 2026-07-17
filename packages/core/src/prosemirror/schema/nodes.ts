@@ -219,6 +219,11 @@ export interface ImageAttrs {
   rId?: string;
   /** Wrap type from DOCX: inline, square, tight, through, topAndBottom, behind, inFront */
   wrapType?: WrapType;
+  /**
+   * `wp:anchor@behindDoc` z-order flag, kept separate from `wrapType` so a
+   * `tight`/`square` image can still render (and round-trip) behind text.
+   */
+  behindDoc?: boolean;
   /** Display mode for CSS: inline (flows with text), float (left/right float), block (centered) */
   displayMode?: 'inline' | 'float' | 'block';
   /** CSS float direction for floating images */

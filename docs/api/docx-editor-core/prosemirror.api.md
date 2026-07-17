@@ -258,6 +258,7 @@ export interface ImageAttrs {
     allowOverlap?: boolean;
     // (undocumented)
     alt?: string;
+    behindDoc?: boolean;
     borderColor?: string;
     borderStyle?: string;
     borderWidth?: number;
