@@ -395,6 +395,12 @@ function paragraphFormattingToAttrs(
   }
   if (paragraphStartsWithPageBreak(paragraph)) {
     attrs.pageBreakBefore = true;
+    // A leading `w:br type="page"` is an EXPLICIT break (an action — Word
+    // always starts a page, even an empty one), unlike pPr `pageBreakBefore`
+    // (a condition — no-op when already at a page top). Layout needs the
+    // distinction or chains of hard breaks collapse and the doc paginates
+    // short of Word.
+    attrs.explicitPageBreakBefore = true;
   }
 
   // Paragraph-mark tracked-change attrs (w:pPr/w:rPr/w:ins, w:del).

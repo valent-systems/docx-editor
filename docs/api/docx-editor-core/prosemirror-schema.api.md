@@ -143,6 +143,7 @@ export interface ParagraphAttrs {
     contextualSpacing?: boolean;
     // (undocumented)
     defaultTextFormatting?: TextFormatting;
+    explicitPageBreakBefore?: boolean;
     // (undocumented)
     hangingIndent?: boolean;
     // (undocumented)

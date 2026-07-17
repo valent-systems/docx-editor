@@ -284,11 +284,17 @@ export function createPaginator(options: PaginatorOptions) {
    * Force a page break - move to a new page.
    *
    * Idempotent when the current page is empty: a section break followed by
-   * `pageBreakBefore` on the next paragraph (or any other chain of forced
-   * breaks) collapses to a single break instead of leaving a phantom page.
+   * `pageBreakBefore` on the next paragraph (or any other chain of CONDITIONAL
+   * breaks) collapses to a single break instead of leaving a phantom page —
+   * matching Word, where pPr `pageBreakBefore` is a no-op at a page top.
+   *
+   * `explicit: true` (a `w:br type="page"` run) bypasses the collapse: Word
+   * treats the hard break as an action and always starts a new page, so a
+   * chain of hard breaks legitimately produces empty pages. Collapsing them
+   * paginates the document short of Word.
    */
-  function forcePageBreak(): PageState {
-    if (states.length > 0) {
+  function forcePageBreak(explicit = false): PageState {
+    if (!explicit && states.length > 0) {
       const current = states[states.length - 1];
       if (current.page.fragments.length === 0 && current.cursorY === current.topMargin) {
         return current;

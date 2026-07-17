@@ -39,6 +39,7 @@ import {
   calculateChainHeight,
   getMidChainIndices,
   hasPageBreakBefore,
+  hasExplicitPageBreakBefore,
 } from './keep-together';
 import { isFloatingTextBoxBlock } from './textBoxFlow';
 import { buildTableRowBreakInfo, snapRowBreak } from './tableRowBreak';
@@ -254,9 +255,8 @@ export function layoutDocument(
     const block = blocks[i];
     const measure = measures[i];
 
-    // Handle pageBreakBefore on paragraphs
     if (hasPageBreakBefore(block)) {
-      paginator.forcePageBreak();
+      paginator.forcePageBreak(hasExplicitPageBreakBefore(block));
     }
 
     // Handle keepNext chains - if this is a chain start, check if chain fits
@@ -307,7 +307,7 @@ export function layoutDocument(
         break;
 
       case 'pageBreak':
-        paginator.forcePageBreak();
+        paginator.forcePageBreak(block.explicit === true);
         break;
 
       case 'columnBreak':

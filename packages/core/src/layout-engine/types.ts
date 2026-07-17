@@ -315,6 +315,7 @@ export type ParagraphAttrs = {
   keepNext?: boolean;
   keepLines?: boolean;
   pageBreakBefore?: boolean;
+  explicitPageBreakBefore?: boolean; // leading `w:br type="page"` — always breaks
   styleId?: string;
   contextualSpacing?: boolean;
   /** Right-to-left paragraph direction */
@@ -537,6 +538,8 @@ export type PageBreakBlock = {
   sdtGroups?: SdtGroup[];
   kind: 'pageBreak';
   id: BlockId;
+  /** Real `w:br type="page"` — always breaks (Word); unset for horizontalRule. */
+  explicit?: boolean;
   pmStart?: number;
   pmEnd?: number;
 };

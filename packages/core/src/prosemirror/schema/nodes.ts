@@ -114,6 +114,14 @@ export interface ParagraphAttrs {
   // Page break control
   pageBreakBefore?: boolean;
   /**
+   * Set alongside `pageBreakBefore` when the break comes from a leading
+   * `w:br type="page"` run (an explicit ACTION: Word always starts a new page,
+   * even an empty one) rather than pPr `w:pageBreakBefore` (a CONDITION:
+   * no-op when the paragraph already sits at a page top). Layout uses this to
+   * bypass the empty-page collapse so hard-break chains paginate like Word.
+   */
+  explicitPageBreakBefore?: boolean;
+  /**
    * Word's cached layout marker (`<w:lastRenderedPageBreak/>`). Treated like
    * `pageBreakBefore` for layout, kept as a separate attr so save+reload
    * preserves the marker at the same position Word recorded.

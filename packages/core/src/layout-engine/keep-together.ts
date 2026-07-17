@@ -190,3 +190,13 @@ export function hasPageBreakBefore(block: FlowBlock): boolean {
   const para = block as ParagraphBlock;
   return para.attrs?.pageBreakBefore === true;
 }
+
+/**
+ * True when the paragraph's break comes from a leading `w:br type="page"` —
+ * an explicit action that always breaks (even onto an empty page), unlike
+ * pPr `pageBreakBefore`, which is conditional. See paginator.forcePageBreak.
+ */
+export function hasExplicitPageBreakBefore(block: FlowBlock): boolean {
+  if (block.kind !== 'paragraph') return false;
+  return (block as ParagraphBlock).attrs?.explicitPageBreakBefore === true;
+}

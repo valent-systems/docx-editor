@@ -348,6 +348,7 @@ export type PageBreakBlock = {
     sdtGroups?: SdtGroup[];
     kind: 'pageBreak';
     id: BlockId;
+    explicit?: boolean;
     pmStart?: number;
     pmEnd?: number;
 };
@@ -379,6 +380,7 @@ export type ParagraphAttrs = {
     keepNext?: boolean;
     keepLines?: boolean;
     pageBreakBefore?: boolean;
+    explicitPageBreakBefore?: boolean;
     styleId?: string;
     contextualSpacing?: boolean;
     bidi?: boolean;

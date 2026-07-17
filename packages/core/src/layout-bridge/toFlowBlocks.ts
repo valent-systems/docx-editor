@@ -211,9 +211,18 @@ function convertParagraphAttrs(
   // Word last broke the page. ECMA-376 §17.4.16 does NOT specify it as a
   // forced break, and Word does not honor it as one on reflow. Preserve the
   // attr through round-trip so the marker is re-emitted on save, but do not
-  // act on it during layout.
+  // act on it during layout. (Measured on the TPX corpus: honoring it as a
+  // conditional break OVERSHOT Word's count 46 → 54, because our layout packs
+  // some pages tighter and some looser — the markers split the looser ones.
+  // The markers' real use is as a per-page fitness target for metric
+  // calibration, not as forced breaks.)
   if (pmAttrs.pageBreakBefore) {
     attrs.pageBreakBefore = true;
+  }
+  // Leading `w:br type="page"` (explicit ACTION — always breaks, even onto an
+  // empty page) vs pPr pageBreakBefore (condition). See paginator.forcePageBreak.
+  if (pmAttrs.explicitPageBreakBefore) {
+    attrs.explicitPageBreakBefore = true;
   }
   if (pmAttrs.keepNext) {
     attrs.keepNext = true;
@@ -860,6 +869,10 @@ export function toFlowBlocks(doc: PMNode, options: ToFlowBlocksOptions = {}): Fl
         const pb: PageBreakBlock = {
           kind: 'pageBreak',
           id: nextBlockId(),
+          // A real page-break node is an explicit `w:br type="page"` — it
+          // always breaks (Word). horizontalRule-derived breaks stay
+          // conditional so they don't mint empty pages.
+          explicit: node.type.name === 'pageBreak' || undefined,
           pmStart: pos,
           pmEnd: pos + node.nodeSize,
         };
