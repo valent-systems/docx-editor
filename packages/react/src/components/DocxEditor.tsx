@@ -17,6 +17,7 @@ import { cn } from '../lib/utils';
 import { type SelectionFormatting } from './Toolbar';
 import type { AgentPanelOptions } from './DocxEditor/types';
 import { useOutlineSidebar } from './DocxEditor/hooks/useOutlineSidebar';
+import { useCenteredHorizontalScroll } from './DocxEditor/hooks/useCenteredHorizontalScroll';
 import { useKeyboardShortcuts } from './DocxEditor/hooks/useKeyboardShortcuts';
 import { useFileIO } from './DocxEditor/hooks/useFileIO';
 import { usePageSetupControls } from './DocxEditor/hooks/usePageSetupControls';
@@ -1522,8 +1523,7 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
   }, [trackedChanges]);
 
   const sidebarOpen = allSidebarItems.length > 0;
-  // Reserve 2× the left-edge allowance so the centered page clears whatever
-  // outline UI is showing, without forcing a shift on wide viewports.
+  // Reserve 2× the left-edge allowance so the centered page clears the outline UI.
   const outlineLeftAllowance =
     (showOutline
       ? OUTLINE_RESERVED_SPACE
@@ -1533,11 +1533,8 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
     // The outline toggle/panel inset past the vertical ruler when it's shown,
     // so the page must clear that extra width too.
     (showRuler && (showOutline || showOutlineButton) ? RULER_WIDTH : 0);
-  // Reserve against the WIDEST page in the doc, not the portrait default: pages
-  // center via `alignItems:center`, so a landscape section (wider than
-  // DEFAULT_PAGE_WIDTH) gets a smaller side margin and, with the old default,
-  // slid left under the outline toggle/panel. Taking the max across all section
-  // widths also covers mixed-orientation docs.
+  // Reserve against the WIDEST page in the doc (not the portrait default) so a
+  // landscape/mixed-orientation section doesn't slide under the outline UI.
   const docBody = history.state?.package?.document;
   const sectionPageWidths = [
     docBody?.finalSectionProperties?.pageWidth,
@@ -1549,6 +1546,9 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
 
   const minLayoutWidth =
     2 * outlineLeftAllowance + maxPageWidthPx + (sidebarOpen ? SIDEBAR_DOCUMENT_SHIFT * 2 : 0);
+
+  // Narrow panes h-scroll (pane < minLayoutWidth): keep the page centered in view.
+  useCenteredHorizontalScroll(scrollContainerRef, { minLayoutWidth, isLoading: state.isLoading });
 
   // pageWidthPx — the final section's width — positions the sidebar / comment
   // margin markers against the page most content lives under.
