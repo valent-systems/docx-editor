@@ -60,6 +60,24 @@ export const DEFAULT_SINGLE_LINE_RATIO = 1.15;
  * lineRule="auto" calculation (ECMA-376 §17.3.1.33).
  */
 const FONT_MAPPINGS: Record<string, FontMapping> = {
+  // Google Fonts used directly by documents. singleLineRatio MUST match the
+  // browser's natural line box (measured in Chrome; hhea-derived) — the
+  // measurer sizes fragments with this ratio while the painter renders the
+  // real face, so a low guess clips the last line of every cell/fragment
+  // (the DEFAULT 1.15 sliced TPX's Onest captions mid-glyph).
+  onest: {
+    googleFont: 'Onest',
+    category: 'sans-serif',
+    fallbackStack: ['Onest', 'Arial', 'Helvetica', 'sans-serif'],
+    singleLineRatio: 1.27, // measured Chrome natural line box (hhea)
+  },
+  roboto: {
+    googleFont: 'Roboto',
+    category: 'sans-serif',
+    fallbackStack: ['Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+    singleLineRatio: 1.17, // measured Chrome natural line box (hhea)
+  },
+
   // Microsoft Office fonts -> Google equivalents (via Croscore)
   calibri: {
     googleFont: 'Carlito',

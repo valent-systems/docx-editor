@@ -40,11 +40,6 @@ test.describe('pagination parity (docProps oracle)', () => {
   for (const doc of CORPUS) {
     test(`${doc.name}: page count within ±${doc.tolerance} of Word`, async ({ page }) => {
       test.skip(!existsSync(doc.path), `corpus file not present: ${doc.path}`);
-      // Known gap (metric calibration pending): TPX measures 43 vs Word's 46.
-      // Geometry and break semantics are verified correct; the residual is
-      // font/line/table metric drift. Remove this marker when calibration
-      // lands — an unexpected pass will flag it.
-      test.fail(true, 'pagination metric calibration pending (43 vs 46)');
       const expected = wordPageCount(doc.path);
       test.skip(expected == null, 'no <Pages> in docProps/app.xml');
 

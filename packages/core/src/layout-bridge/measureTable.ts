@@ -28,37 +28,23 @@ const DEFAULT_CELL_PADDING_X = 7;
 const DEFAULT_CELL_PADDING_Y = 0;
 
 /**
- * Visual height of a single block inside a table cell.
+ * Visual height of a single block inside a table cell — the block's measured
+ * height, exactly as the painter will render it (dual-renderer rule).
  *
- * A one-line paragraph that contains only image runs is laid out at the
- * image's intrinsic height (plus the paragraph's explicit spacing), not
- * a full text line — matching Word's per-cell layout. Everything else
- * uses the measured `totalHeight` / `height`.
+ * An image-only single-line paragraph previously special-cased to the image's
+ * bare intrinsic height, but the painter renders that line at the paragraph
+ * measure's line height (image + baseline descent — an inline image sits on
+ * the text baseline, in Word too). Sizing the cell box short of the painted
+ * content clipped the bottom of every icon-grid cell (TPX: captions sliced
+ * mid-glyph, row breaks cutting icons in half across pages).
  */
-export function measureTableCellBlockVisualHeight(block: FlowBlock, blockMeasure: Measure): number {
-  if (block.kind !== 'paragraph' || blockMeasure.kind !== 'paragraph') {
-    if ('totalHeight' in blockMeasure) return blockMeasure.totalHeight;
-    if ('height' in blockMeasure) return blockMeasure.height;
-    return 0;
-  }
-
-  const nonEmptyRuns = block.runs.filter((run) => run.kind !== 'text' || run.text.length > 0);
-  const imageOnlySingleLine =
-    blockMeasure.lines.length === 1 &&
-    nonEmptyRuns.length > 0 &&
-    nonEmptyRuns.every((run) => run.kind === 'image');
-
-  if (!imageOnlySingleLine) {
-    return blockMeasure.totalHeight;
-  }
-
-  const maxImageHeight = nonEmptyRuns.reduce(
-    (h, run) => (run.kind === 'image' ? Math.max(h, run.height) : h),
-    0
-  );
-  const spacingBefore = block.attrs?.spacing?.before ?? 0;
-  const spacingAfter = block.attrs?.spacing?.after ?? 0;
-  return spacingBefore + maxImageHeight + spacingAfter;
+export function measureTableCellBlockVisualHeight(
+  _block: FlowBlock,
+  blockMeasure: Measure
+): number {
+  if ('totalHeight' in blockMeasure) return blockMeasure.totalHeight;
+  if ('height' in blockMeasure) return blockMeasure.height;
+  return 0;
 }
 
 /** Combined top + bottom border width of a cell, in pixels. */

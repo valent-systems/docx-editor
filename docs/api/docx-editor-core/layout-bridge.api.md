@@ -527,7 +527,7 @@ export function measureRun(text: string, style: FontStyle): RunMeasurement;
 export function measureTableBlock(tableBlock: TableBlock, contentWidth: number, measureBlock: (block: FlowBlock, contentWidth: number) => Measure): TableMeasure;
 
 // @public
-export function measureTableCellBlockVisualHeight(block: FlowBlock, blockMeasure: Measure): number;
+export function measureTableCellBlockVisualHeight(_block: FlowBlock, blockMeasure: Measure): number;
 
 // @public
 export function measureText(text: string, style: FontStyle): TextMeasurement;
