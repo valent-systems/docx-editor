@@ -74,7 +74,12 @@ export function computeKeepNextChains(blocks: FlowBlock[]): Map<number, KeepNext
         endIndex = j;
         processed.add(j);
       } else {
-        // Found the anchor - stop here
+        // Found the anchor - stop here. Deliberately Word-accurate: the
+        // anchor is the immediate next paragraph EVEN IF EMPTY — Word keeps
+        // a keepNext heading with the next paragraph mark, blank or not
+        // (verified against TPX's lastRenderedPageBreak record: Word leaves
+        // "heading + blank" at a page bottom). Chaining through blanks would
+        // push headings Word doesn't push and diverge pagination.
         break;
       }
     }
