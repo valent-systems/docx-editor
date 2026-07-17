@@ -46,22 +46,18 @@ describe('measureTableCellBlockVisualHeight', () => {
     expect(measureTableCellBlockVisualHeight(block, measure)).toBe(17.9);
   });
 
-  test('uses image height for single-line image-only paragraphs', () => {
+  test('image-only paragraphs use the measured height, exactly as painted', () => {
+    // Previously special-cased to the image's bare intrinsic height (29), but
+    // the painter renders the line at the paragraph measure's height (image +
+    // baseline descent) — the mismatch clipped icon-grid cells mid-glyph and
+    // cut icons in half at row breaks (TPX). Dual-renderer rule: the cell box
+    // is sized by the same measure the painter draws.
     const block = paragraphBlock([{ kind: 'image', src: 'logo.png', width: 186, height: 29 }], {
       spacing: { before: 0, after: 0 },
     });
     const measure = paragraphMeasure(34.859375, 34.859375);
 
-    expect(measureTableCellBlockVisualHeight(block, measure)).toBe(29);
-  });
-
-  test('preserves explicit spacing around image-only paragraphs', () => {
-    const block = paragraphBlock([{ kind: 'image', src: 'logo.png', width: 186, height: 29 }], {
-      spacing: { before: 8, after: 4 },
-    });
-    const measure = paragraphMeasure(40, 40);
-
-    expect(measureTableCellBlockVisualHeight(block, measure)).toBe(41);
+    expect(measureTableCellBlockVisualHeight(block, measure)).toBe(34.859375);
   });
 
   test('falls back to totalHeight for non-paragraph measures', () => {

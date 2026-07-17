@@ -707,6 +707,20 @@
   background-color: var(--doc-bg-hover);
 }
 
+/* Toolbar strip chrome — themable by embedders via --doc-toolbar-*. Defaults
+ * preserve the classic look (muted pill, no border, small side margins). A
+ * host app can restyle the bar to match its own chrome (flat surface, its
+ * radius/border tokens) without forking the component: set the variables on
+ * a scope above .ep-root. Layout (flex/padding/min-height) stays on the
+ * component's utility classes. */
+.ep-root .ep-toolbar {
+  background: var(--doc-toolbar-bg, hsl(var(--muted)));
+  border: var(--doc-toolbar-border, none);
+  border-radius: var(--doc-toolbar-radius, 9999px);
+  box-shadow: var(--doc-toolbar-shadow, none);
+  margin: var(--doc-toolbar-margin, 0 0.5rem 0.25rem);
+}
+
 /* React toolbar toggle buttons (bold/italic/comments/...). Owned here, not via
  * Tailwind utilities: `cn` is clsx-only (no tailwind-merge), so competing
  * hover:bg utilities don't dedupe and the active slab could lose its color on

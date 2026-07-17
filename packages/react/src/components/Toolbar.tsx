@@ -677,8 +677,11 @@ export function Toolbar(explicitProps: ToolbarProps) {
     <div
       ref={barRef}
       className={cn(
-        !inline &&
-          'flex items-center px-2 py-1 bg-muted rounded-full min-h-[36px] overflow-x-auto mx-2 mb-1',
+        // Strip CHROME (background/border/radius/shadow/margins) lives in
+        // editor.css under `.ep-toolbar`, driven by --doc-toolbar-* tokens so
+        // embedders can restyle the bar to match their app (defaults preserve
+        // the classic muted pill). Only LAYOUT utilities belong here.
+        !inline && 'ep-toolbar flex items-center px-2 py-1 min-h-[36px] overflow-x-auto',
         className
       )}
       style={inline ? { display: 'contents', ...style } : style}

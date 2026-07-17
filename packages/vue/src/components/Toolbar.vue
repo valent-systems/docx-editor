@@ -804,18 +804,20 @@ function isCurrentLineSpacing(twips: number): boolean {
 </script>
 
 <style scoped>
-/* Pill-shaped toolbar — mirrors React's Toolbar exactly:
-   bg #f1f5f9 (slate-100), rounded-full, 36px min-height, px-2 py-1,
-   mx-2 mb-1, overflow-x auto. */
+/* Toolbar strip — mirrors React's Toolbar exactly. Chrome (background /
+   border / radius / shadow / margins) is driven by the shared
+   --doc-toolbar-* tokens (see core editor.css `.ep-toolbar`) so embedders
+   can restyle the bar; defaults preserve the classic muted pill. */
 .basic-toolbar {
   display: flex;
   align-items: center;
   gap: 1px;
   padding: 4px 8px;
-  margin: 0 8px 4px;
-  /* Match React's formatting-row pill exactly (Toolbar.tsx: bg-muted) */
-  background: hsl(var(--muted));
-  border-radius: 9999px;
+  margin: var(--doc-toolbar-margin, 0 8px 4px);
+  background: var(--doc-toolbar-bg, hsl(var(--muted)));
+  border: var(--doc-toolbar-border, none);
+  border-radius: var(--doc-toolbar-radius, 9999px);
+  box-shadow: var(--doc-toolbar-shadow, none);
   flex-wrap: nowrap;
   min-height: 36px;
   overflow-x: auto;
