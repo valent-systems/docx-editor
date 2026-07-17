@@ -16,11 +16,18 @@ import { EditorPage } from '../helpers/editor-page';
  * pagination work.
  */
 
-const CORPUS: Array<{ name: string; path: string; tolerance: number }> = [
+const SAMPLES = '/Users/ryanrudd/Source/xyz-ai-docx-demo/src/scripts/docx-spike/samples';
+const CORPUS: Array<{ name: string; path: string; tolerance: number; knownGap?: string }> = [
+  { name: 'tpx-proposal-template', path: `${SAMPLES}/tpx-proposal-template.docx`, tolerance: 1 },
+  { name: 'pws-vfmp', path: `${SAMPLES}/pws-vfmp.docx`, tolerance: 1 },
+  // 37MB, 103 pages — the heavyweight in the corpus. Known gap: measures 97
+  // vs Word's 103 (−6). Localize with pagination-drift.debug.spec.ts when
+  // picking this up; drop knownGap once fixed so an unexpected pass flags it.
   {
-    name: 'tpx-proposal-template',
-    path: '/Users/ryanrudd/Source/xyz-ai-docx-demo/src/scripts/docx-spike/samples/tpx-proposal-template.docx',
-    tolerance: 1,
+    name: 'drc-qualification-template',
+    path: `${SAMPLES}/drc-qualification-template.docx`,
+    tolerance: 2,
+    knownGap: 'DRC measures 97 vs 103 — unlocalized drift',
   },
 ];
 
@@ -40,13 +47,14 @@ test.describe('pagination parity (docProps oracle)', () => {
   for (const doc of CORPUS) {
     test(`${doc.name}: page count within ±${doc.tolerance} of Word`, async ({ page }) => {
       test.skip(!existsSync(doc.path), `corpus file not present: ${doc.path}`);
+      if (doc.knownGap) test.fail(true, doc.knownGap);
       const expected = wordPageCount(doc.path);
       test.skip(expected == null, 'no <Pages> in docProps/app.xml');
 
       const editor = new EditorPage(page);
       await editor.goto();
       await editor.waitForReady();
-      test.setTimeout(180_000); // 11MB image-heavy docs parse slowly
+      test.setTimeout(360_000); // multi-MB image-heavy docs parse slowly
       await editor.loadDocxFile(doc.path);
       // Let pagination settle (image measure passes re-run layout).
       await page.waitForTimeout(5_000);
