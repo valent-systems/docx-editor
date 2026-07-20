@@ -329,7 +329,7 @@ export type NumberingMap = {
 };
 
 // @public
-export type ParagraphParserFn = (node: Element_2, styles: StyleMap | null, theme: Theme | null, numbering: NumberingMap | null, rels?: RelationshipMap | null) => Paragraph;
+export type ParagraphParserFn = (node: Element_2, styles: StyleMap | null, theme: Theme | null, numbering: NumberingMap | null, rels?: RelationshipMap | null, media?: Map<string, MediaFile> | null) => Paragraph;
 
 // @public
 export function parseBorderSpec(element: Element_2 | null): BorderSpec | undefined;
@@ -421,7 +421,7 @@ export function parseTabStopsFromParagraphProperties(pPr: Element_2 | null): Tab
 export function parseTextBox(drawingEl: Element_2): TextBox | null;
 
 // @public
-export function parseTextBoxContent(txbxContent: Element_2 | null, parseParagraph: ParagraphParserFn, parseTable: TableParserFn | null, styles: StyleMap | null, theme: Theme | null, numbering: NumberingMap | null, rels?: RelationshipMap | null, _media?: Map<string, MediaFile>): Paragraph[];
+export function parseTextBoxContent(txbxContent: Element_2 | null, parseParagraph: ParagraphParserFn, parseTable: TableParserFn | null, styles: StyleMap | null, theme: Theme | null, numbering: NumberingMap | null, rels?: RelationshipMap | null, media?: Map<string, MediaFile>): Paragraph[];
 
 // @public
 export function parseTextBoxFromShape(wsp: Element_2, size: ImageSize, position?: ImagePosition, wrap?: ImageWrap): TextBox | null;
