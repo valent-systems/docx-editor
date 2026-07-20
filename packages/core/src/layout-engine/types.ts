@@ -898,6 +898,14 @@ export type TextBoxFragment = FragmentBase & {
   isFloating?: boolean;
   /** Stack order hint for anchored text boxes. */
   zIndex?: number;
+  /**
+   * Layout-engine anchor position, recorded by the painter on first resolve.
+   * Fragments persist across paints while x/y are overwritten with the
+   * RESOLVED position — re-resolving must start here, not from y, or each
+   * repaint re-adds the anchor offset (deep-scroll drift bug).
+   */
+  anchorX?: number;
+  anchorY?: number;
 };
 
 /**

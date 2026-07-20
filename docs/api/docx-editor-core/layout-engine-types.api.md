@@ -687,6 +687,8 @@ export type TextBoxFragment = FragmentBase & {
     height: number;
     isFloating?: boolean;
     zIndex?: number;
+    anchorX?: number;
+    anchorY?: number;
 };
 
 // @public

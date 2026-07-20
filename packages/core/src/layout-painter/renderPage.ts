@@ -594,7 +594,13 @@ export function renderPage(
       const textBoxBlock = blockData.block as TextBoxBlock;
       if (!isFloatingTextBoxBlock(textBoxBlock)) continue;
 
-      const anchorContentY = fragment.y - page.margins.top;
+      // Fragments persist across paints while x/y get overwritten with the
+      // RESOLVED position below — resolve from the immutable anchor recorded
+      // on first paint, never from y, or every repaint re-adds the anchor
+      // offset and the box walks down the page (deep-scroll drift bug).
+      fragment.anchorX ??= fragment.x;
+      fragment.anchorY ??= fragment.y;
+      const anchorContentY = fragment.anchorY - page.margins.top;
       const resolved = resolveAnchoredObjectPosition(
         {
           width: fragment.width,

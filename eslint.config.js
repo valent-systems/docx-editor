@@ -194,12 +194,12 @@ export default [
   // layout-engine/types.ts is the canonical schema definition for the
   // layout model — single file by design (cross-referencing types). Bumped
   // modestly above the default to accommodate new revision-tracking,
-  // table-pagination and behindDoc z-order fields without forcing a split that
-  // would obscure the schema.
+  // table-pagination, behindDoc z-order and fragment-anchor fields without
+  // forcing a split that would obscure the schema.
   {
     files: ['packages/core/src/layout-engine/types.ts'],
     rules: {
-      'max-lines': ['error', { max: 1090, skipBlankLines: false, skipComments: false }],
+      'max-lines': ['error', { max: 1100, skipBlankLines: false, skipComments: false }],
     },
   },
 
