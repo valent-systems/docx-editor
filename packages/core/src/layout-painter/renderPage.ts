@@ -26,7 +26,6 @@ import type {
   ImageBlock,
   ImageMeasure,
   ImageFragment,
-  ImageRun,
   TextBoxBlock,
   TextBoxMeasure,
   TextBoxFragment,
@@ -56,18 +55,10 @@ import {
   floatingTextBoxWrapsText,
   isFloatingTextBoxBlock,
 } from '../layout-engine/textBoxFlow';
-import {
-  floatingImageIsBehindDoc,
-  floatingImageWrapsText,
-  imageWrapTextFromCssFloat,
-  isFloatingImageRun,
-} from './floatingImageFlow';
-import {
-  pageGeometryFromPage,
-  resolveAnchoredObjectPosition,
-  type PageGeometry,
-} from './anchoredObjectPosition';
+import { floatingImageIsBehindDoc, floatingImageWrapsText } from './floatingImageFlow';
+import { pageGeometryFromPage, resolveAnchoredObjectPosition } from './anchoredObjectPosition';
 import { renderFloatingImagesLayer } from './floatingImageLayer';
+import { extractFloatingImagesFromParagraph, type PageFloatingImage } from './floatingImageExtract';
 import {
   renderHeaderFooterContent,
   renderBehindHeaderFooterImagesLayer,
@@ -105,45 +96,6 @@ export {
   renderAllPagesNow,
   type RenderPagesUpdateKind,
 } from './renderPage/virtualization';
-
-/**
- * Page-level floating image that has been extracted from paragraphs.
- * These are positioned absolutely within the page's content area.
- */
-interface PageFloatingImage {
-  src: string;
-  width: number;
-  height: number;
-  alt?: string;
-  transform?: string;
-  /** Which side: 'left' for left margin, 'right' for right margin */
-  side: 'left' | 'right';
-  /** X position relative to content area (0 = left edge of content) */
-  x: number;
-  /** Y position relative to content area (0 = top of content) */
-  y: number;
-  /** Wrap distances */
-  distTop: number;
-  distBottom: number;
-  distLeft: number;
-  distRight: number;
-  /** ProseMirror start position for click-to-select */
-  pmStart?: number;
-  /** ProseMirror end position */
-  pmEnd?: number;
-  /** OOXML wrapText: which side(s) TEXT flows on */
-  wrapText?: 'bothSides' | 'left' | 'right' | 'largest';
-  /** Wrap type (square, tight, through, topAndBottom) */
-  wrapType?: string;
-  /** `wp:anchor@behindDoc`: paint behind text regardless of wrap type. */
-  behindDoc?: boolean;
-  cropTop?: number;
-  cropRight?: number;
-  cropBottom?: number;
-  cropLeft?: number;
-  /** a:alphaModFix → opacity. */
-  opacity?: number;
-}
 
 /**
  * CSS class names for page elements
@@ -410,59 +362,6 @@ function applyFragmentStyles(
 }
 
 /**
- * Extract floating images from a paragraph block and determine their page-level positions.
- * Returns extracted images and info for the paragraph about space reserved.
- */
-function extractFloatingImagesFromParagraph(
-  block: ParagraphBlock,
-  fragmentY: number, // Y position of the paragraph fragment on the page (relative to content area)
-  contentWidth: number, // Width of the content area
-  geometry?: PageGeometry
-): PageFloatingImage[] {
-  const floatingImages: PageFloatingImage[] = [];
-
-  for (const run of block.runs) {
-    if (run.kind !== 'image') continue;
-    const imgRun = run as ImageRun;
-
-    if (!isFloatingImageRun(imgRun)) continue;
-
-    const distTop = imgRun.distTop ?? 0;
-    const distBottom = imgRun.distBottom ?? 0;
-    const distLeft = imgRun.distLeft ?? 12;
-    const distRight = imgRun.distRight ?? 12;
-    const { x, y, side } = resolveAnchoredObjectPosition(imgRun, fragmentY, contentWidth, geometry);
-
-    floatingImages.push({
-      src: imgRun.src,
-      width: imgRun.width,
-      height: imgRun.height,
-      alt: imgRun.alt,
-      transform: imgRun.transform,
-      side,
-      x,
-      y,
-      distTop,
-      distBottom,
-      distLeft,
-      distRight,
-      pmStart: imgRun.pmStart,
-      pmEnd: imgRun.pmEnd,
-      wrapText: imageWrapTextFromCssFloat(imgRun.cssFloat),
-      wrapType: imgRun.wrapType,
-      behindDoc: imgRun.behindDoc,
-      cropTop: imgRun.cropTop,
-      cropRight: imgRun.cropRight,
-      cropBottom: imgRun.cropBottom,
-      cropLeft: imgRun.cropLeft,
-      opacity: imgRun.opacity,
-    });
-  }
-
-  return floatingImages;
-}
-
-/**
  * Render a single page to DOM
  *
  * @param page - The page to render
@@ -522,7 +421,9 @@ export function renderPage(
           paragraphBlock,
           contentRelativeY,
           contentWidth,
-          pageGeometry
+          pageGeometry,
+          { fromLine: fragment.fromLine, toLine: fragment.toLine },
+          blockData.measure
         );
         allFloatingImages.push(...extracted);
 
