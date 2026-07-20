@@ -71,13 +71,18 @@ const FONT_MAPPINGS: Record<string, FontMapping> = {
     fallbackStack: ['Onest', 'Arial', 'Helvetica', 'sans-serif'],
     singleLineRatio: 1.27, // measured Chrome natural line box (hhea)
   },
-  roboto: {
-    googleFont: 'Roboto',
+  'source sans pro': {
+    googleFont: 'Source Sans Pro',
     category: 'sans-serif',
-    fallbackStack: ['Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
-    singleLineRatio: 1.17, // measured Chrome natural line box (hhea)
+    fallbackStack: ['Source Sans Pro', 'Source Sans 3', 'Arial', 'sans-serif'],
+    singleLineRatio: 1.25, // measured Chrome natural line box (hhea)
   },
-
+  'bebas neue': {
+    googleFont: 'Bebas Neue',
+    category: 'sans-serif',
+    fallbackStack: ['Bebas Neue', 'Arial Narrow', 'sans-serif'],
+    singleLineRatio: 1.2, // measured Chrome natural line box (hhea)
+  },
   // Microsoft Office fonts -> Google equivalents (via Croscore)
   calibri: {
     googleFont: 'Carlito',

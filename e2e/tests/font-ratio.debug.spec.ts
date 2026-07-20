@@ -11,15 +11,15 @@ test('probe: natural line-height ratios for doc fonts', async ({ page }) => {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href =
-      'https://fonts.googleapis.com/css2?family=Onest:wght@400;600&family=Roboto:wght@300;400&display=swap';
+      'https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400&family=Source+Sans+Pro:wght@400&family=Bebas+Neue&display=swap';
     document.head.appendChild(link);
     await new Promise((r) => {
       link.onload = r;
       setTimeout(r, 4000);
     });
-    await document.fonts.load('400 100px Onest');
-    await document.fonts.load('600 100px Onest');
-    await document.fonts.load('300 100px Roboto');
+    await document.fonts.load('400 100px "Source Sans 3"');
+    await document.fonts.load('400 100px "Source Sans Pro"');
+    await document.fonts.load('400 100px "Bebas Neue"');
     await document.fonts.ready;
 
     const measure = (family: string, weight: number) => {
@@ -32,13 +32,13 @@ test('probe: natural line-height ratios for doc fonts', async ({ page }) => {
       return h;
     };
     return {
-      onest400: measure('Onest', 400),
-      onest600: measure('Onest', 600),
-      roboto300: measure('Roboto', 300),
-      roboto400: measure('Roboto', 400),
+      sourceSans3: measure('Source Sans 3', 400),
+      sourceSansPro: measure('Source Sans Pro', 400),
+      bebasNeue: measure('Bebas Neue', 400),
       loaded: {
-        onest: document.fonts.check('400 16px Onest'),
-        roboto: document.fonts.check('300 16px Roboto'),
+        ss3: document.fonts.check('400 16px "Source Sans 3"'),
+        ssp: document.fonts.check('400 16px "Source Sans Pro"'),
+        bebas: document.fonts.check('400 16px "Bebas Neue"'),
       },
     };
   });

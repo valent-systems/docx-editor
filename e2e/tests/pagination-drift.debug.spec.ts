@@ -18,7 +18,9 @@ import { EditorPage } from '../helpers/editor-page';
  * differ are the exact local divergences.
  */
 
+// Override with DRIFT_DOCX=/path/to/file.docx to map any corpus document.
 const DOCX =
+  process.env.DRIFT_DOCX ??
   '/Users/ryanrudd/Source/xyz-ai-docx-demo/src/scripts/docx-spike/samples/tpx-proposal-template.docx';
 
 const norm = (s: string) =>
