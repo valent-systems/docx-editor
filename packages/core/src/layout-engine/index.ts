@@ -28,7 +28,6 @@ import type {
   ImageFragment,
   TextBoxBlock,
   TextBoxMeasure,
-  TextBoxFragment,
   SectionBreakBlock,
 } from './types';
 import { assertExhaustiveFlowBlock } from './types';
@@ -41,7 +40,7 @@ import {
   hasPageBreakBefore,
   hasExplicitPageBreakBefore,
 } from './keep-together';
-import { isFloatingTextBoxBlock } from './textBoxFlow';
+import { layoutTextBox } from './layoutTextBox';
 import { buildTableRowBreakInfo, snapRowBreak } from './tableRowBreak';
 import { MIN_WRAP_SEGMENT_WIDTH } from '../layout-bridge/measuring/floatingZones';
 import { getParagraphFragmentPmRange } from './paragraphFragmentRange';
@@ -850,50 +849,6 @@ function layoutAnchoredImage(
 /**
  * Layout a text box block onto pages.
  */
-function layoutTextBox(
-  block: TextBoxBlock,
-  measure: TextBoxMeasure,
-  paginator: ReturnType<typeof createPaginator>
-): void {
-  if (measure.kind !== 'textBox') {
-    throw new Error(`layoutTextBox: expected textBox measure`);
-  }
-
-  if (isFloatingTextBoxBlock(block)) {
-    const state = paginator.getCurrentState();
-    const fragment: TextBoxFragment = {
-      kind: 'textBox',
-      blockId: block.id,
-      x: paginator.getColumnX(state.columnIndex),
-      y: state.cursorY,
-      width: measure.width,
-      height: measure.height,
-      pmStart: block.pmStart,
-      pmEnd: block.pmEnd,
-      isFloating: true,
-      zIndex: block.wrapType === 'behind' ? -1 : 1,
-    };
-    state.page.fragments.push(fragment);
-    return;
-  }
-
-  const state = paginator.ensureFits(measure.height);
-
-  const fragment: TextBoxFragment = {
-    kind: 'textBox',
-    blockId: block.id,
-    x: paginator.getColumnX(state.columnIndex),
-    y: 0,
-    width: measure.width,
-    height: measure.height,
-    pmStart: block.pmStart,
-    pmEnd: block.pmEnd,
-  };
-
-  const result = paginator.addFragment(fragment, measure.height, 0, 0);
-  fragment.y = result.y;
-}
-
 /**
  * Handle a section break block.
  * @param block - The section break block (current section's properties)
