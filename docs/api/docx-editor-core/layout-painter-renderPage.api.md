@@ -235,7 +235,7 @@ export function q(fragment: ImageFragment, block: ImageBlock, _measure: ImageMea
 // @public
 export function r(fragment: Fragment, context: RenderContext, options?: RenderFragmentOptions): HTMLElement;
 
-// @public
+// @public (undocumented)
 export function renderAllPagesNow(container: HTMLElement): number;
 
 // @public
@@ -294,6 +294,13 @@ export function renderPages(pages: Page[], container: HTMLElement, options?: Ren
 
 // @public
 export type RenderPagesUpdateKind = 'incremental' | 'full';
+
+// @public
+export function repaintPage(container: HTMLElement, pageIndex: number, patch?: {
+    blockId: string | number;
+    block: unknown;
+    measure: unknown;
+}): boolean;
 
 // @public
 export function resolveHeaderFooterFloatingTablePosition(floating: NonNullable<TableBlock['floating']>, layout: HeaderFooterLayoutInfo): {

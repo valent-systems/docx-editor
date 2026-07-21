@@ -1,32 +1,38 @@
 /**
- * Typing fast path (docs/INCREMENTAL-LAYOUT.md, milestone M1).
+ * Typing fast path (docs/INCREMENTAL-LAYOUT.md, milestones M1+M2).
  *
- * For the common keystroke — a plain-text edit inside one top-level,
- * non-list paragraph whose re-measured geometry (line count + total height)
- * is unchanged — skip the full layout pipeline: patch the block + measure
- * in place, repaint only the page(s) showing that paragraph, and let the
- * deferred settle pass (the ordinary full pipeline, scheduled at
- * typing-idle by the caller) reconcile everything else. The fast path only
- * has to be visually correct until settle runs; any ineligible or
- * ambiguous edit returns false and the caller runs the full pipeline
- * immediately, exactly as before.
+ * For the common keystroke — a plain-text edit inside one paragraph whose
+ * re-measured geometry (line count + total height) is unchanged — skip the
+ * full layout pipeline: patch the block + measure in place, repaint only
+ * the page(s) showing it, and let the deferred settle pass (the ordinary
+ * full pipeline, scheduled at typing-idle by the caller) reconcile
+ * everything else. The fast path only has to be visually correct until
+ * settle runs; any ineligible or ambiguous edit returns false and the
+ * caller runs the full pipeline immediately, exactly as before.
  *
- * Deliberately conservative eligibility (widened in M2):
- * - every step's change range sits inside ONE top-level `paragraph` node
- * - the paragraph is not a list item (no `numId`) and not framed (framePr)
- * - old and new runs are text/tab/lineBreak only (no images, no shapes)
- * - re-measured at the fragment's width with no floating zones, the
- *   result matches the old measure's line count and total height — a
- *   mismatch implies float context or reflow, both full-pipeline work
+ * Two eligible shapes:
+ * - a top-level paragraph (M1)
+ * - a paragraph directly inside a non-nested table cell (M2) — re-measured
+ *   at the cell's content width; the row only keeps its geometry when the
+ *   paragraph's does, which the measure comparison guarantees
+ *
+ * Shared eligibility: text/tab/lineBreak runs only (no images/shapes), not
+ * framed (framePr). List paragraphs ARE eligible — the pre-computed
+ * `listMarker` text is carried over from the old block, since a text edit
+ * cannot renumber anything (structure edits fail the one-paragraph range
+ * check and take the full pipeline).
  */
 
 import type { EditorState, Transaction } from 'prosemirror-state';
+import type { Node as PMNode } from 'prosemirror-model';
 import type {
   FlowBlock,
   Measure,
   Layout,
   ParagraphBlock,
   ParagraphMeasure,
+  TableBlock,
+  TableMeasure,
 } from '@valent/docx-editor-core/layout-engine';
 import { convertSingleParagraph } from '@valent/docx-editor-core/layout-bridge/toFlowBlocks';
 import { measureParagraph } from '@valent/docx-editor-core/layout-bridge';
@@ -35,6 +41,8 @@ import type { Theme } from '@valent/docx-editor-core/types';
 
 const FAST_RUN_KINDS = new Set(['text', 'tab', 'lineBreak']);
 const HEIGHT_EPSILON = 0.5;
+/** Word's TableNormal default cell side padding (see measureTable.ts). */
+const DEFAULT_CELL_PADDING_X = 7;
 
 export interface FastEditContext {
   /** Live block/measure arrays from the last full pass — patched in place. */
@@ -60,22 +68,210 @@ function changedRange(tr: Transaction): { from: number; to: number } | null {
   return from <= to ? { from, to } : null;
 }
 
-function paragraphIsEligible(node: {
-  type: { name: string };
-  attrs: Record<string, unknown>;
-}): boolean {
-  if (node.type.name !== 'paragraph') return false;
-  if (node.attrs.numId != null) return false;
-  const orig = node.attrs._originalFormatting as { frame?: unknown } | undefined;
-  if (orig?.frame) return false;
-  return true;
-}
-
 function runsAreFast(block: ParagraphBlock): boolean {
   for (const run of block.runs) {
     if (!FAST_RUN_KINDS.has((run as { kind: string }).kind)) return false;
   }
   return true;
+}
+
+/**
+ * Convert + re-measure one paragraph and verify its geometry is unchanged.
+ * Returns the patched pair (identity taken from `oldBlock`) or null when
+ * ineligible / geometry moved.
+ */
+function remeasurePreservingGeometry(
+  parNode: PMNode,
+  parStart: number,
+  width: number,
+  oldBlock: ParagraphBlock,
+  oldMeasure: ParagraphMeasure,
+  ctx: FastEditContext,
+  defaultTabStopTwips: number | undefined
+): { newBlock: ParagraphBlock; newMeasure: ParagraphMeasure } | null {
+  const orig = parNode.attrs._originalFormatting as { frame?: unknown } | undefined;
+  if (orig?.frame) return null;
+  if (!runsAreFast(oldBlock)) return null;
+
+  const newBlock = convertSingleParagraph(parNode, parStart, {
+    theme: ctx.theme ?? undefined,
+    defaultTabStopTwips,
+  });
+  if (!runsAreFast(newBlock)) return null;
+
+  // Numbered paragraphs: the marker text needs document-wide counter state
+  // that convertSingleParagraph doesn't have. A text edit can't renumber, so
+  // carry the old pre-computed marker over.
+  const oldAttrs = oldBlock.attrs;
+  if (parNode.attrs.numId != null && oldAttrs && newBlock.attrs) {
+    newBlock.attrs.listMarker = oldAttrs.listMarker;
+    newBlock.attrs.listMarkerHidden = oldAttrs.listMarkerHidden;
+    newBlock.attrs.listMarkerFontFamily = oldAttrs.listMarkerFontFamily;
+    newBlock.attrs.listMarkerFontSize = oldAttrs.listMarkerFontSize;
+  }
+
+  const newMeasure = measureParagraph(newBlock, width);
+  if (newMeasure.lines.length !== oldMeasure.lines.length) return null;
+  if (Math.abs(newMeasure.totalHeight - oldMeasure.totalHeight) > HEIGHT_EPSILON) return null;
+
+  newBlock.id = oldBlock.id;
+  return { newBlock, newMeasure };
+}
+
+/** Pages showing fragments of `blockId`, plus the paragraph-fragment width. */
+function findFragmentPages(
+  layout: Layout,
+  blockId: FlowBlock['id']
+): { pages: number[]; paragraphWidth: number | null } {
+  const pages: number[] = [];
+  let paragraphWidth: number | null = null;
+  for (let p = 0; p < layout.pages.length; p++) {
+    for (const frag of layout.pages[p].fragments) {
+      if (frag.blockId !== blockId) continue;
+      if (pages[pages.length - 1] !== p) pages.push(p);
+      if (frag.kind === 'paragraph') paragraphWidth = frag.width;
+    }
+  }
+  return { pages, paragraphWidth };
+}
+
+function repaintPages(
+  container: HTMLElement,
+  pages: number[],
+  patch?: { blockId: string | number; block: unknown; measure: unknown }
+): boolean {
+  let ok = true;
+  for (let i = 0; i < pages.length; i++) {
+    ok = repaintPage(container, pages[i], i === 0 ? patch : undefined) && ok;
+  }
+  return ok;
+}
+
+/** Fast path for an edit inside a top-level paragraph (M1). */
+function attemptParagraphFastEdit(
+  node: PMNode,
+  nodeStart: number,
+  delta: number,
+  ctx: FastEditContext,
+  defaultTabStopTwips: number | undefined
+): boolean {
+  const { blocks, measures, layout, pagesContainer } = ctx;
+  const blockIndex = blocks.findIndex(
+    (b) => b.kind === 'paragraph' && (b as ParagraphBlock).pmStart === nodeStart
+  );
+  if (blockIndex < 0) return false;
+  const oldBlock = blocks[blockIndex] as ParagraphBlock;
+  const oldMeasure = measures[blockIndex];
+  if (oldMeasure?.kind !== 'paragraph') return false;
+
+  const { pages, paragraphWidth } = findFragmentPages(layout!, oldBlock.id);
+  if (pages.length === 0 || paragraphWidth == null) return false;
+
+  const patched = remeasurePreservingGeometry(
+    node,
+    nodeStart,
+    paragraphWidth,
+    oldBlock,
+    oldMeasure as ParagraphMeasure,
+    ctx,
+    defaultTabStopTwips
+  );
+  if (!patched) return false;
+
+  blocks[blockIndex] = patched.newBlock;
+  measures[blockIndex] = patched.newMeasure;
+  for (const p of pages) {
+    for (const frag of layout!.pages[p].fragments) {
+      if (frag.blockId === oldBlock.id && frag.pmEnd !== undefined) frag.pmEnd += delta;
+    }
+  }
+  return repaintPages(pagesContainer!, pages, {
+    blockId: oldBlock.id,
+    block: patched.newBlock,
+    measure: patched.newMeasure,
+  });
+}
+
+/** Fast path for an edit inside a paragraph in a non-nested table cell (M2). */
+function attemptTableCellFastEdit(
+  tableStart: number,
+  $from: ReturnType<EditorState['doc']['resolve']>,
+  range: { from: number; to: number },
+  delta: number,
+  ctx: FastEditContext,
+  defaultTabStopTwips: number | undefined
+): boolean {
+  const { blocks, measures, layout, pagesContainer } = ctx;
+
+  // The innermost textblock must be a paragraph whose ancestry contains
+  // exactly one table (no nested tables) and the whole change is inside it.
+  if ($from.parent.type.name !== 'paragraph') return false;
+  const parDepth = $from.depth;
+  const parStart = $from.before(parDepth);
+  const parEnd = $from.after(parDepth);
+  if (range.from < parStart || range.to > parEnd) return false;
+  let tableCount = 0;
+  for (let d = 1; d <= parDepth; d++) {
+    if ($from.node(d).type.name === 'table') tableCount++;
+  }
+  if (tableCount !== 1) return false;
+
+  const blockIndex = blocks.findIndex(
+    (b) => b.kind === 'table' && (b as TableBlock).pmStart === tableStart
+  );
+  if (blockIndex < 0) return false;
+  const tableBlock = blocks[blockIndex] as TableBlock;
+  const tableMeasure = measures[blockIndex];
+  if (tableMeasure?.kind !== 'table') return false;
+
+  // Locate the edited paragraph inside the table's nested structure.
+  for (let r = 0; r < tableBlock.rows.length; r++) {
+    const row = tableBlock.rows[r];
+    for (let c = 0; c < row.cells.length; c++) {
+      const cell = row.cells[c];
+      for (let i = 0; i < cell.blocks.length; i++) {
+        const b = cell.blocks[i];
+        if (b.kind !== 'paragraph' || (b as ParagraphBlock).pmStart !== parStart) continue;
+
+        const oldPara = b as ParagraphBlock;
+        const cellMeasure = (tableMeasure as TableMeasure).rows[r]?.cells?.[c];
+        const oldParaMeasure = cellMeasure?.blocks?.[i];
+        if (!cellMeasure || oldParaMeasure?.kind !== 'paragraph') return false;
+
+        const padLeft = cell.padding?.left ?? DEFAULT_CELL_PADDING_X;
+        const padRight = cell.padding?.right ?? DEFAULT_CELL_PADDING_X;
+        const cellContentWidth = Math.max(1, cellMeasure.width - padLeft - padRight);
+
+        const patched = remeasurePreservingGeometry(
+          $from.parent,
+          parStart,
+          cellContentWidth,
+          oldPara,
+          oldParaMeasure as ParagraphMeasure,
+          ctx,
+          defaultTabStopTwips
+        );
+        if (!patched) return false;
+
+        // Patch the nested structures in place. The painter's blockLookup
+        // entry points at these same table objects, so no lookup patch is
+        // needed — only the repaint.
+        cell.blocks[i] = patched.newBlock;
+        cellMeasure.blocks[i] = patched.newMeasure;
+        if (tableBlock.pmEnd !== undefined) tableBlock.pmEnd += delta;
+
+        const { pages } = findFragmentPages(layout!, tableBlock.id);
+        if (pages.length === 0) return false;
+        for (const p of pages) {
+          for (const frag of layout!.pages[p].fragments) {
+            if (frag.blockId === tableBlock.id && frag.pmEnd !== undefined) frag.pmEnd += delta;
+          }
+        }
+        return repaintPages(pagesContainer!, pages);
+      }
+    }
+  }
+  return false;
 }
 
 /**
@@ -89,7 +285,7 @@ export function attemptFastEdit(
   newState: EditorState,
   ctx: FastEditContext
 ): boolean {
-  const { blocks, measures, layout, pagesContainer } = ctx;
+  const { blocks, layout, pagesContainer } = ctx;
   if (!layout || !pagesContainer || blocks.length === 0) return false;
 
   const range = changedRange(tr);
@@ -104,69 +300,17 @@ export function attemptFastEdit(
   const node = doc.child($from.index(0));
   const nodeEnd = nodeStart + node.nodeSize;
   if (range.to > nodeEnd) return false;
-  if (!paragraphIsEligible(node as unknown as Parameters<typeof paragraphIsEligible>[0])) {
-    return false;
-  }
 
-  // Locate the old block: the paragraph's start position is before the edit,
-  // so it is unchanged by this transaction — pmStart matches directly.
-  const blockIndex = blocks.findIndex(
-    (b) => b.kind === 'paragraph' && (b as ParagraphBlock).pmStart === nodeStart
-  );
-  if (blockIndex < 0) return false;
-  const oldBlock = blocks[blockIndex] as ParagraphBlock;
-  const oldMeasure = measures[blockIndex];
-  if (oldMeasure?.kind !== 'paragraph') return false;
-  if (!runsAreFast(oldBlock)) return false;
-
-  // Find the fragment(s) painting this block and their pages.
-  const fragmentPages: number[] = [];
-  let fragmentWidth: number | null = null;
-  for (let p = 0; p < layout.pages.length; p++) {
-    for (const frag of layout.pages[p].fragments) {
-      if (frag.kind === 'paragraph' && frag.blockId === oldBlock.id) {
-        fragmentPages.push(p);
-        fragmentWidth = frag.width;
-      }
-    }
-  }
-  if (fragmentPages.length === 0 || fragmentWidth == null) return false;
-
-  // Re-convert and re-measure just this paragraph.
-  const defaultTabStopTwips = doc.attrs?.defaultTabStopTwips as number | undefined;
-  const newBlock = convertSingleParagraph(node, nodeStart, {
-    theme: ctx.theme ?? undefined,
-    defaultTabStopTwips,
-  });
-  if (!runsAreFast(newBlock)) return false;
-  const newMeasure = measureParagraph(newBlock, fragmentWidth);
-
-  const om = oldMeasure as ParagraphMeasure;
-  if (newMeasure.lines.length !== om.lines.length) return false;
-  if (Math.abs(newMeasure.totalHeight - om.totalHeight) > HEIGHT_EPSILON) return false;
-
-  // Patch in place. Keep the old identity so fragments and the painter's
-  // lookup still resolve; bump pmEnd by the transaction's size delta.
   const delta = tr.doc.content.size - tr.before.content.size;
-  newBlock.id = oldBlock.id;
-  blocks[blockIndex] = newBlock;
-  measures[blockIndex] = newMeasure;
-  for (const p of fragmentPages) {
-    for (const frag of layout.pages[p].fragments) {
-      if (frag.kind === 'paragraph' && frag.blockId === oldBlock.id) {
-        if (frag.pmEnd !== undefined) frag.pmEnd += delta;
-      }
-    }
-  }
+  const defaultTabStopTwips = doc.attrs?.defaultTabStopTwips as number | undefined;
 
-  let painted = true;
-  for (let i = 0; i < fragmentPages.length; i++) {
-    painted =
-      repaintPage(
-        pagesContainer,
-        fragmentPages[i],
-        i === 0 ? { blockId: oldBlock.id, block: newBlock, measure: newMeasure } : undefined
-      ) && painted;
+  if (node.type.name === 'paragraph') {
+    // Top-level paragraph: the change must be inside it (already guaranteed
+    // by the nodeEnd check above).
+    return attemptParagraphFastEdit(node, nodeStart, delta, ctx, defaultTabStopTwips);
   }
-  return painted;
+  if (node.type.name === 'table') {
+    return attemptTableCellFastEdit(nodeStart, $from, range, delta, ctx, defaultTabStopTwips);
+  }
+  return false;
 }

@@ -160,7 +160,7 @@ export interface PainterOptions {
     showShadow?: boolean;
 }
 
-// @public
+// @public (undocumented)
 export function renderAllPagesNow(container: HTMLElement): number;
 
 // @public
@@ -234,6 +234,13 @@ export function renderTableFragment(fragment: TableFragment, block: TableBlock, 
 
 // @public
 export function renderTextBoxFragment(fragment: TextBoxFragment, block: TextBoxBlock, measure: TextBoxMeasure, context: RenderContext, options?: RenderTextBoxFragmentOptions): HTMLElement;
+
+// @public
+export function repaintPage(container: HTMLElement, pageIndex: number, patch?: {
+    blockId: string | number;
+    block: unknown;
+    measure: unknown;
+}): boolean;
 
 // @public (undocumented)
 export function resolveAnchoredObjectPosition(object: AnchoredObjectPositionInput, fragmentY: number, contentWidth: number, geometry?: PageGeometry): AnchoredObjectPosition;

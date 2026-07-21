@@ -20,6 +20,9 @@ export function convertBorderSpecToLayout(border: {
 }, theme?: Theme | null): BorderStyle | undefined;
 
 // @public
+export function convertSingleParagraph(node: Node_2, pmStart: number, options?: ToFlowBlocksOptions): ParagraphBlock;
+
+// @public
 export function resetBlockIdCounter(): void;
 
 // @public
