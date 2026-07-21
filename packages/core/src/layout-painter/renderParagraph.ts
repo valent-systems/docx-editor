@@ -429,7 +429,14 @@ export function renderParagraphFragment(
       // Absolute right edge in content-area coords. The fragment starts at
       // content-area-x=0 with full content-area width; the rightmost x where
       // inline content can land is `fragment.width - indentRight - lineRightOffset`.
-      lineRightEdgePx: fragment.width - indentRight - lineRightOffset,
+      // A RIGHT-ALIGNED line paints in a shrink-wrapped box pinned to the
+      // margin, so its own measured width IS the right edge — without this,
+      // an end-tab that fills the line (Word's header center+right tab
+      // pattern) never reaches the content edge, the flex right-anchor never
+      // engages, and canvas-vs-DOM drift pushes the trailing text past the
+      // margin (DRC header 'PROJECT TITLE' clipped at the page edge).
+      lineRightEdgePx:
+        alignment === 'right' ? line.width : fragment.width - indentRight - lineRightOffset,
     });
 
     // Apply left offset from floating images (lines start after the floating image)
