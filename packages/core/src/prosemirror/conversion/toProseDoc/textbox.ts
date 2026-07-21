@@ -75,7 +75,12 @@ function extractTextBoxesFromParagraph(paragraph: Paragraph): TextBox[] {
       for (const rc of content.content) {
         if (rc.type === 'shape' && 'shape' in rc) {
           const shape = rc.shape as Shape;
-          if (shape.textBody && shape.textBody.content.length > 0) {
+          // Convert shapes with text AND textless decorative shapes that have
+          // a visible fill/outline (e.g. a full-width navy header banner
+          // rectangle) — dropping the latter erased the banner entirely.
+          const hasText = !!shape.textBody && shape.textBody.content.length > 0;
+          const isDecorative = !hasText && !!(shape.fill || shape.outline);
+          if (shape.textBody && (hasText || isDecorative)) {
             // Convert shape with text body to TextBox
             textBoxes.push({
               type: 'textBox',

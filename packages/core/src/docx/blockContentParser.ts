@@ -32,6 +32,7 @@ import { parseParagraph } from './paragraphParser';
 import { parseTable } from './tableParser';
 import {
   isTextBoxDrawing,
+  hasWpsShape,
   parseTextBox,
   getTextBoxContentElement,
   parseTextBoxContent,
@@ -165,7 +166,10 @@ function enrichParagraphTextBoxes(
   // Walk into <mc:AlternateContent> wrappers too: Word stores anchored
   // wps:wsp text boxes inside Choice Requires="wps" (Fallback is VML).
   function processDrawing(drawingEl: XmlElement): void {
-    if (!isTextBoxDrawing(drawingEl)) return;
+    // Handle any wps shape: with wps:txbx it's a text box; without it's a
+    // decorative filled shape (e.g. a full-width header banner rectangle) —
+    // parseTextBox handles both, leaving content empty for the latter.
+    if (!isTextBoxDrawing(drawingEl) && !hasWpsShape(drawingEl)) return;
 
     const textBox = parseTextBox(drawingEl);
     if (!textBox) return;

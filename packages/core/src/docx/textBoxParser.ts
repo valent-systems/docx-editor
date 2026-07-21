@@ -258,13 +258,11 @@ export function parseTextBox(drawingEl: XmlElement): TextBox | null {
   const graphicData = findByFullName(graphic, 'a:graphicData');
   if (!graphicData) return null;
 
-  // Check for wps:wsp (shape)
+  // Check for wps:wsp (shape). A wps shape WITHOUT wps:txbx is a decorative
+  // filled shape (e.g. a full-width header banner rectangle) — still parsed:
+  // size/position/wrap/fill all live on the shape; content stays empty.
   const wsp = findByFullName(graphicData, 'wps:wsp');
   if (!wsp) return null;
-
-  // Check for text box
-  const txbx = findByFullName(wsp, 'wps:txbx');
-  if (!txbx) return null;
 
   const wspChildren = getChildElements(wsp);
 
@@ -506,4 +504,20 @@ export function resolveTextBoxOutlineColor(textBox: TextBox): string | undefined
 export function getTextBoxOutlineWidthPx(textBox: TextBox): number {
   if (!textBox.outline?.width) return 0;
   return emuToPixels(textBox.outline.width);
+}
+
+/**
+ * Check if a drawing element contains ANY wps shape (with or without a text
+ * box). Textless wps shapes are decorative fills — a header banner rectangle,
+ * a divider — and must still reach the shape pipeline.
+ */
+export function hasWpsShape(drawingEl: XmlElement): boolean {
+  const children = getChildElements(drawingEl);
+  const container = children.find((el) => el.name === 'wp:inline' || el.name === 'wp:anchor');
+  if (!container) return false;
+  const graphic = findByFullName(container, 'a:graphic');
+  if (!graphic) return false;
+  const graphicData = findByFullName(graphic, 'a:graphicData');
+  if (!graphicData) return false;
+  return findByFullName(graphicData, 'wps:wsp') !== null;
 }
