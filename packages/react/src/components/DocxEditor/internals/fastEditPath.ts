@@ -76,16 +76,16 @@ function runsAreFast(block: ParagraphBlock): boolean {
 }
 
 /**
- * Convert + re-measure one paragraph and verify its geometry is unchanged.
- * Returns the patched pair (identity taken from `oldBlock`) or null when
- * ineligible / geometry moved.
+ * Convert + re-measure one paragraph (eligibility-checked). Returns the new
+ * pair (identity taken from `oldBlock`) or null when ineligible. Geometry
+ * comparison is the caller's job — M1 requires it unchanged; M2b absorbs a
+ * height change within the page's slack.
  */
-function remeasurePreservingGeometry(
+function remeasureEligibleParagraph(
   parNode: PMNode,
   parStart: number,
   width: number,
   oldBlock: ParagraphBlock,
-  oldMeasure: ParagraphMeasure,
   ctx: FastEditContext,
   defaultTabStopTwips: number | undefined
 ): { newBlock: ParagraphBlock; newMeasure: ParagraphMeasure } | null {
@@ -111,11 +111,66 @@ function remeasurePreservingGeometry(
   }
 
   const newMeasure = measureParagraph(newBlock, width);
-  if (newMeasure.lines.length !== oldMeasure.lines.length) return null;
-  if (Math.abs(newMeasure.totalHeight - oldMeasure.totalHeight) > HEIGHT_EPSILON) return null;
-
   newBlock.id = oldBlock.id;
   return { newBlock, newMeasure };
+}
+
+function geometryUnchanged(a: ParagraphMeasure, b: ParagraphMeasure): boolean {
+  return (
+    a.lines.length === b.lines.length && Math.abs(a.totalHeight - b.totalHeight) <= HEIGHT_EPSILON
+  );
+}
+
+/**
+ * M2b: absorb a height/line-count change within one page. Eligible when the
+ * paragraph paints as a single whole fragment on a single-column page, no
+ * floating content (text boxes / images) sits below it on that page, and
+ * growth still fits above the page's content bottom. Fragments below shift
+ * by the height delta; the settle pass repaginates properly.
+ *
+ * Returns the pageIndex to repaint, or null when not absorbable.
+ */
+function tryAbsorbReflowInPage(
+  layoutPages: Layout['pages'],
+  pages: number[],
+  blockId: FlowBlock['id'],
+  oldMeasure: ParagraphMeasure,
+  newMeasure: ParagraphMeasure
+): number | null {
+  if (pages.length !== 1) return null;
+  const pageIndex = pages[0];
+  const page = layoutPages[pageIndex];
+  if ((page.columns?.count ?? 1) > 1) return null;
+
+  const frags = page.fragments;
+  const parFrag = frags.find((f) => f.blockId === blockId);
+  if (!parFrag || parFrag.kind !== 'paragraph') return null;
+  if (frags.filter((f) => f.blockId === blockId).length !== 1) return null;
+  // Whole paragraph on this page (not a split fragment).
+  if (parFrag.fromLine !== 0 || parFrag.toLine !== oldMeasure.lines.length) return null;
+
+  const deltaH = newMeasure.totalHeight - oldMeasure.totalHeight;
+  const parBottomOld = parFrag.y + parFrag.height;
+  const contentBottom =
+    page.size.h - page.margins.top - page.margins.bottom - (page.footnoteReservedHeight ?? 0);
+
+  let maxBottom = parFrag.y + newMeasure.totalHeight;
+  for (const f of frags) {
+    if (f === parFrag) continue;
+    const below = f.y >= parBottomOld - HEIGHT_EPSILON;
+    if (below && (f.kind === 'textBox' || f.kind === 'image')) return null; // anchored content would misalign
+    if (below) maxBottom = Math.max(maxBottom, f.y + f.height + deltaH);
+  }
+  if (deltaH > 0 && maxBottom > contentBottom + HEIGHT_EPSILON) return null;
+
+  // Commit: resize the paragraph fragment, shift everything below.
+  parFrag.height = newMeasure.totalHeight;
+  parFrag.toLine = newMeasure.lines.length;
+  for (const f of frags) {
+    if (f === parFrag) continue;
+    if (f.y >= parBottomOld - HEIGHT_EPSILON) f.y += deltaH;
+  }
+  return pageIndex;
 }
 
 /** Pages showing fragments of `blockId`, plus the paragraph-fragment width. */
@@ -167,16 +222,29 @@ function attemptParagraphFastEdit(
   const { pages, paragraphWidth } = findFragmentPages(layout!, oldBlock.id);
   if (pages.length === 0 || paragraphWidth == null) return false;
 
-  const patched = remeasurePreservingGeometry(
+  const patched = remeasureEligibleParagraph(
     node,
     nodeStart,
     paragraphWidth,
     oldBlock,
-    oldMeasure as ParagraphMeasure,
     ctx,
     defaultTabStopTwips
   );
   if (!patched) return false;
+
+  const om = oldMeasure as ParagraphMeasure;
+  if (!geometryUnchanged(patched.newMeasure, om)) {
+    // M2b: a line wrapped (or unwrapped) — absorb the height change within
+    // the page's slack instead of bailing to the full pipeline.
+    const absorbed = tryAbsorbReflowInPage(
+      layout!.pages,
+      pages,
+      oldBlock.id,
+      om,
+      patched.newMeasure
+    );
+    if (absorbed == null) return false;
+  }
 
   blocks[blockIndex] = patched.newBlock;
   measures[blockIndex] = patched.newMeasure;
@@ -242,16 +310,22 @@ function attemptTableCellFastEdit(
         const padRight = cell.padding?.right ?? DEFAULT_CELL_PADDING_X;
         const cellContentWidth = Math.max(1, cellMeasure.width - padLeft - padRight);
 
-        const patched = remeasurePreservingGeometry(
+        const patched = remeasureEligibleParagraph(
           $from.parent,
           parStart,
           cellContentWidth,
           oldPara,
-          oldParaMeasure as ParagraphMeasure,
           ctx,
           defaultTabStopTwips
         );
-        if (!patched) return false;
+        // Table cells stay geometry-strict: a height change moves the row,
+        // which moves the whole table — full-pipeline work.
+        if (
+          !patched ||
+          !geometryUnchanged(patched.newMeasure, oldParaMeasure as ParagraphMeasure)
+        ) {
+          return false;
+        }
 
         // Patch the nested structures in place. The painter's blockLookup
         // entry points at these same table objects, so no lookup patch is
