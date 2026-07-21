@@ -16,7 +16,7 @@
     <div class="docx-editor-vue__toolbar-shell">
       <DocxEditorMenuBar
         :show-menu-bar="showMenuBar"
-        :document-name="documentName"
+        :document-name="showDocumentName ? documentName : undefined"
         :document-name-editable="documentNameEditable"
         :show-file-open="showFileOpen"
         :show-help-menu="showHelpMenu"
@@ -454,6 +454,7 @@ const props = withDefaults(defineProps<DocxEditorProps>(), {
   showMenuBar: true,
   showRuler: true,
   documentName: '',
+  showDocumentName: true,
   readOnly: false,
   author: 'User',
   mode: 'editing',

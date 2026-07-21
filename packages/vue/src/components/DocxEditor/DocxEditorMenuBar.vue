@@ -13,6 +13,7 @@
     </div>
     <div class="docx-editor-vue__title-bar-center">
       <DocumentName
+        v-if="documentName !== undefined"
         :model-value="documentName"
         :editable="documentNameEditable"
         @update:model-value="(name: string) => emit('rename', name)"
@@ -39,7 +40,7 @@ import MenuBar from '../MenuBar.vue';
 withDefaults(
   defineProps<{
     showMenuBar: boolean;
-    documentName: string;
+    documentName?: string;
     documentNameEditable?: boolean;
     showFileOpen?: boolean;
     showHelpMenu?: boolean;

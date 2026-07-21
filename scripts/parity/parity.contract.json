@@ -12,6 +12,7 @@
       "documentBuffer",
       "documentName",
       "documentNameEditable",
+      "showDocumentName",
       "externalPlugins",
       "fontFamilies",
       "fonts",

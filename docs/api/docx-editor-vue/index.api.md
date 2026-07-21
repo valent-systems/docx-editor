@@ -82,6 +82,7 @@ export interface DocxEditorProps {
     readOnly?: boolean;
     renderLogo?: () => VNodeChild;
     renderTitleBarRight?: () => VNodeChild;
+    showDocumentName?: boolean;
     showFileOpen?: boolean;
     showHelpMenu?: boolean;
     showMenuBar?: boolean;

@@ -117,6 +117,9 @@ export interface DocxEditorProps {
   onDocumentNameChange?: (name: string) => void;
   /** Whether the document name is editable. */
   documentNameEditable?: boolean;
+  /** Show the name in the title bar (default true). False hides the display
+   *  only — `documentName` still names File > Save downloads. */
+  showDocumentName?: boolean;
   /** Custom right-side actions renderer for the title bar. Slots remain preferred in templates. */
   renderTitleBarRight?: () => VNodeChild;
   /** Callback fired whenever the document changes. Mirrors the `@change` event. */

@@ -300,6 +300,8 @@ export interface DocxEditorProps {
   renderLogo?: () => ReactNode;
   /** Document name shown in the title bar */
   documentName?: string;
+  /** Show the name in the title bar (default true; File > Save keeps naming downloads). */
+  showDocumentName?: boolean;
   /** Callback when document name changes */
   onDocumentNameChange?: (name: string) => void;
   /** Whether the document name is editable (default: true) */
@@ -649,6 +651,7 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
     pluginRenderedDomContext,
     renderLogo,
     documentName,
+    showDocumentName = true,
     onDocumentNameChange,
     documentNameEditable = true,
     renderTitleBarRight,
@@ -1523,7 +1526,6 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
   }, [trackedChanges]);
 
   const sidebarOpen = allSidebarItems.length > 0;
-  // Reserve 2× the left-edge allowance so the centered page clears the outline UI.
   const outlineLeftAllowance =
     (showOutline
       ? OUTLINE_RESERVED_SPACE
@@ -1533,8 +1535,7 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
     // The outline toggle/panel inset past the vertical ruler when it's shown,
     // so the page must clear that extra width too.
     (showRuler && (showOutline || showOutlineButton) ? RULER_WIDTH : 0);
-  // Reserve against the WIDEST page in the doc (not the portrait default) so a
-  // landscape/mixed-orientation section doesn't slide under the outline UI.
+  // Widest page in the doc, so landscape sections don't slide under the outline UI.
   const docBody = history.state?.package?.document;
   const sectionPageWidths = [
     docBody?.finalSectionProperties?.pageWidth,
@@ -1547,7 +1548,6 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
   const minLayoutWidth =
     2 * outlineLeftAllowance + maxPageWidthPx + (sidebarOpen ? SIDEBAR_DOCUMENT_SHIFT * 2 : 0);
 
-  // Narrow panes h-scroll (pane < minLayoutWidth): keep the page centered in view.
   useCenteredHorizontalScroll(scrollContainerRef, { minLayoutWidth, isLoading: state.isLoading });
 
   // pageWidthPx — the final section's width — positions the sidebar / comment
@@ -1800,7 +1800,7 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
             showCommentsSidebar={showCommentsSidebar}
             agentPanel={agentPanel}
             renderLogo={renderLogo}
-            documentName={documentName}
+            documentName={showDocumentName ? documentName : undefined}
             onDocumentNameChange={onDocumentNameChange}
             documentNameEditable={documentNameEditable}
             renderTitleBarRight={renderTitleBarRight}
