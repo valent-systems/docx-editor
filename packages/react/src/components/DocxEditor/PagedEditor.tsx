@@ -65,6 +65,7 @@ import {
   pluginOverlaysStyles,
 } from './internals/styles';
 import { viewportMinHeightPx } from './internals/scrollUtils';
+import { useDeferredDocumentNotify } from './hooks/useDeferredDocumentNotify';
 import { useLayoutPipeline } from './hooks/useLayoutPipeline';
 import { useSelectionOverlay } from './hooks/useSelectionOverlay';
 import { useImageInteractions } from './hooks/useImageInteractions';
@@ -502,6 +503,13 @@ const PagedEditorComponent = forwardRef<PagedEditorRef, PagedEditorProps>(
     // Event Handlers
     // =========================================================================
 
+    // Coalesce the expensive getDocument() + onDocumentChange fan-out to a
+    // typing-idle window (see useDeferredDocumentNotify for the rationale).
+    const { schedule: scheduleDocumentChangeNotify } = useDeferredDocumentNotify(
+      () => hiddenPMRef.current?.getDocument(),
+      (doc) => onDocumentChangeRef.current?.(doc)
+    );
+
     /**
      * Handle PM transaction - re-layout on content/selection change.
      */
@@ -519,11 +527,8 @@ const PagedEditorComponent = forwardRef<PagedEditorRef, PagedEditorProps>(
           // Content changed - schedule layout (coalesced via rAF)
           scheduleLayout(newState);
 
-          // Notify document change - use ref to avoid infinite loops
-          const newDoc = hiddenPMRef.current?.getDocument();
-          if (newDoc) {
-            onDocumentChangeRef.current?.(newDoc);
-          }
+          // Notify document change once typing pauses (see above).
+          scheduleDocumentChangeNotify();
         }
 
         // Request selection update (will only execute when layout is current)
@@ -537,7 +542,13 @@ const PagedEditorComponent = forwardRef<PagedEditorRef, PagedEditorProps>(
           updateSelectionOverlay(newState);
         }
       },
-      [scheduleLayout, updateSelectionOverlay, syncCoordinator, notifyDecorationLayer]
+      [
+        scheduleLayout,
+        updateSelectionOverlay,
+        syncCoordinator,
+        notifyDecorationLayer,
+        scheduleDocumentChangeNotify,
+      ]
       // NOTE: onDocumentChange removed from dependencies - accessed via ref to prevent infinite loops
     );
 

@@ -225,6 +225,17 @@ export default [
     },
   },
 
+  // PagedEditor.tsx is the paginated-view orchestrator (PM view host, layout
+  // pipeline wiring, scroll/selection APIs, transaction routing). Most logic
+  // already lives in extracted hooks; the remainder is glue that reads better
+  // in one place.
+  {
+    files: ['packages/react/src/components/DocxEditor/PagedEditor.tsx'],
+    rules: {
+      'max-lines': ['error', { max: 1020, skipBlankLines: false, skipComments: false }],
+    },
+  },
+
   // DocxEditor.vue is the host component — same role as React's
   // DocxEditor.tsx (which has a 2000-line cap). The React-parity callback
   // props (#720) add per-prop wiring that must live inline in the SFC (the
