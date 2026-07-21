@@ -66,6 +66,7 @@ import {
 } from './internals/styles';
 import { viewportMinHeightPx } from './internals/scrollUtils';
 import { useDeferredDocumentNotify } from './hooks/useDeferredDocumentNotify';
+import { useFastEditPath } from './hooks/useFastEditPath';
 import { useLayoutPipeline } from './hooks/useLayoutPipeline';
 import { useSelectionOverlay } from './hooks/useSelectionOverlay';
 import { useImageInteractions } from './hooks/useImageInteractions';
@@ -510,6 +511,19 @@ const PagedEditorComponent = forwardRef<PagedEditorRef, PagedEditorProps>(
       (doc) => onDocumentChangeRef.current?.(doc)
     );
 
+    // Typing fast path (docs/INCREMENTAL-LAYOUT.md M1): geometry-preserving
+    // paragraph edits patch block/measure in place and repaint only the dirty
+    // page(s); a deferred settle pass (the ordinary full pipeline) reconciles
+    // at typing-idle.
+    const { tryFastEdit } = useFastEditPath({
+      layout,
+      blocks,
+      measures,
+      theme: _theme,
+      pagesContainerRef,
+      scheduleLayout,
+    });
+
     /**
      * Handle PM transaction - re-layout on content/selection change.
      */
@@ -521,11 +535,17 @@ const PagedEditorComponent = forwardRef<PagedEditorRef, PagedEditorProps>(
         notifyDecorationLayer();
 
         if (transaction.docChanged) {
-          // Increment state sequence to signal document changed
-          syncCoordinator.incrementStateSeq();
+          if (tryFastEdit(transaction, newState)) {
+            // Painted in place (settle pass already scheduled) — refresh the
+            // caret against the patched data.
+            updateSelectionOverlay(newState);
+          } else {
+            // Increment state sequence to signal document changed
+            syncCoordinator.incrementStateSeq();
 
-          // Content changed - schedule layout (coalesced via rAF)
-          scheduleLayout(newState);
+            // Content changed - schedule layout (coalesced via rAF)
+            scheduleLayout(newState);
+          }
 
           // Notify document change once typing pauses (see above).
           scheduleDocumentChangeNotify();
@@ -548,6 +568,7 @@ const PagedEditorComponent = forwardRef<PagedEditorRef, PagedEditorProps>(
         syncCoordinator,
         notifyDecorationLayer,
         scheduleDocumentChangeNotify,
+        tryFastEdit,
       ]
       // NOTE: onDocumentChange removed from dependencies - accessed via ref to prevent infinite loops
     );

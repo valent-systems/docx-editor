@@ -34,6 +34,7 @@ import {
   renderPage,
   renderPages,
   renderAllPagesNow,
+  repaintPage,
   type RenderContext,
   type RenderPagesUpdateKind,
 } from './renderPage';
@@ -49,6 +50,7 @@ export {
   renderPage,
   renderPages,
   renderAllPagesNow,
+  repaintPage,
   renderParagraphFragment,
   renderTableFragment,
   renderImageFragment,

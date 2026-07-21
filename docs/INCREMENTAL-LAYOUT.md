@@ -152,19 +152,38 @@ Incremental output must be bit-identical to batch output.
 
 ## Milestones
 
+Re-sequenced 2026-07-21 after vetting against Tiptap (continuous-scroll,
+browser layout — not comparable; their own Pages product hits our exact
+wall), CKEditor (pagination as an overlay decoration, decoupled from
+typing), and Google Docs (custom engine, incremental + async settle). The
+shared property of everything that types fluidly: **pagination is decoupled
+from the keystroke**. So frame-split ships FIRST — it caps perceived latency
+regardless of pipeline cost, and every keystroke gets a deferred full settle
+pass, so the fast path only has to be visually right for ~300ms and any miss
+self-heals. The incremental pillars then shrink settle time, not perceived
+latency.
+
 Each ships independently, gated on the dual-run harness staying green and the
 typing-latency probe (keystroke timing on the DRC corpus file) improving.
 
-| milestone                                   | expected effect (DRC file)                 |
-| ------------------------------------------- | ------------------------------------------ |
-| M1: stable identity + incremental convert   | convert ~7ms → <1ms; enables M2+           |
-| M2: identity-keyed measure (+float/textbox) | measure ~16ms → ~1ms                       |
-| M3: resumable pagination + table-info cache | layout ~5ms → ~1ms; stable at any doc size |
-| M4: store fan-out, overlay dirty filtering  | React ~50ms → ~5-10ms                      |
-| M5: frame-split scheduling                  | visible response ≤16ms always              |
+| milestone                                       | expected effect (DRC file)                  |
+| ----------------------------------------------- | ------------------------------------------- |
+| M1: frame-split fast path + deferred settle     | perceived response ≤16ms for eligible edits |
+| M2: widen fast-path eligibility (height deltas) | ≤16ms for nearly all edits                  |
+| M3: stable identity + incremental convert       | settle convert ~7ms → <1ms                  |
+| M4: identity-keyed measure (+float/textbox)     | settle measure ~16ms → ~1ms                 |
+| M5: resumable pagination + table-info cache     | settle layout O(dirty pages)                |
+| M6: store fan-out, overlay dirty filtering      | settle React ~50ms → ~5-10ms                |
 
-M1–M3 land in core (shared with the Vue adapter for free). M4 is per
-adapter. M5 is core scheduling + adapter paint hooks.
+M1's fast path: an eligible edit (plain-text change inside one non-list
+paragraph with no floating objects in play, re-measured to the same height
+and line count) patches the block + measure in place, repaints only the
+dirty page, and schedules the full pipeline at typing-idle. Ineligible edits
+run the full pipeline immediately, exactly as today. M2 extends eligibility
+to line-count changes that fit within the page's remaining slack (content
+may briefly overflow-clip until settle, matching Google Docs' visible
+behavior). M3–M5 land in core (shared with the Vue adapter); M6 is per
+adapter.
 
 Latency probe: `e2e` keystroke timing (see the 2026-07 session's
 `type-freeze` probe pattern — click into body text and a large table on the

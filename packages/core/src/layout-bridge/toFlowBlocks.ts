@@ -718,6 +718,29 @@ function convertTextBoxNode(
 }
 
 /**
+ * Convert one top-level, non-list paragraph PM node to a ParagraphBlock.
+ *
+ * Typing fast path only (docs/INCREMENTAL-LAYOUT.md M1). Callers MUST have
+ * verified the node is a plain paragraph outside any list: conversion here
+ * runs without the document-wide list counter state, so a numbered
+ * paragraph would render a wrong marker. The returned block carries a fresh
+ * id — the caller re-assigns the id of the block it replaces so downstream
+ * identity (fragments, painter lookup) is preserved.
+ */
+export function convertSingleParagraph(
+  node: PMNode,
+  pmStart: number,
+  options: ToFlowBlocksOptions = {}
+): ParagraphBlock {
+  const opts: ToFlowBlocksOptions = {
+    ...options,
+    defaultFont: options.defaultFont ?? DEFAULT_FONT,
+    defaultSize: options.defaultSize ?? DEFAULT_SIZE,
+  };
+  return convertParagraph(node, pmStart, opts);
+}
+
+/**
  * Convert a ProseMirror document to FlowBlock array.
  *
  * Walks the document tree, converting each node to the appropriate block type.

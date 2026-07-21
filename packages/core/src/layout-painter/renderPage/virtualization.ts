@@ -556,6 +556,45 @@ function depopulatePageShell(
  * never managed by `renderPages`. Returns the number of shells populated
  * by this call (useful for tests).
  */
+/**
+ * Repaint a single page in place, optionally patching a block in the stored
+ * `blockLookup` first.
+ *
+ * This is the paint half of the typing fast path (docs/INCREMENTAL-LAYOUT.md
+ * M1): when an edit changes a paragraph's content but not its measured
+ * geometry, the caller patches the block/measure pair and repaints only the
+ * page(s) showing it — no relayout, no fingerprint diffing (fingerprints
+ * hash fragment geometry, which is unchanged, so `renderPages` would skip
+ * the page).
+ *
+ * Returns false when `container` isn't managed by `renderPages` or the page
+ * index is out of range. A virtualized-away (unrendered) page returns true
+ * without painting — it will pick up the patched lookup when it scrolls in.
+ */
+export function repaintPage(
+  container: HTMLElement,
+  pageIndex: number,
+  patch?: { blockId: string | number; block: unknown; measure: unknown }
+): boolean {
+  const pc = container as PageContainer;
+  const state = pc.__pageRenderState;
+  if (!state) return false;
+  const shell = state.pageStates[pageIndex]?.element;
+  if (!shell) return false;
+
+  if (patch) {
+    const lookup = (
+      state.currentOptions as { blockLookup?: Map<string, { block: unknown; measure: unknown }> }
+    ).blockLookup;
+    lookup?.set(String(patch.blockId), { block: patch.block, measure: patch.measure });
+  }
+
+  const data = state.pageDataMap.get(shell);
+  if (!data?.rendered) return true;
+  repopulatePageContent(shell, state.pageDataMap, state.totalPages, state.currentOptions);
+  return true;
+}
+
 export function renderAllPagesNow(container: HTMLElement): number {
   const pc = container as PageContainer;
   const state = pc.__pageRenderState;

@@ -95,6 +95,7 @@ export {
   renderPages,
   renderAllPagesNow,
   type RenderPagesUpdateKind,
+  repaintPage,
 } from './renderPage/virtualization';
 
 /**
