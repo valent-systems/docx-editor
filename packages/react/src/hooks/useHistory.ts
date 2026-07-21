@@ -383,14 +383,15 @@ export function useDocumentHistory<
     package?: { document?: unknown; headers?: unknown; footers?: unknown } | null;
   } | null,
 >(document: T, options: Omit<UseHistoryOptions<T>, 'isEqual'> = {}): UseHistoryReturn<T> {
-  // Compare document content, headers, and footers for detecting changes
+  // Reference equality ONLY — no deep compare. The old JSON.stringify
+  // fallback serialized the entire document model (including every image's
+  // base64 data URL — tens of MB on image-heavy files) twice per push, which
+  // froze typing for seconds per keystroke. Every push site hands us a
+  // freshly-built document from a docChanged transaction or an explicit
+  // model edit, so a new reference ⇒ a real change; the worst case of a
+  // false positive is one redundant (no-op) undo entry, not data loss.
   const isEqual = useCallback((a: T, b: T): boolean => {
-    if (a?.package?.document !== b?.package?.document) {
-      if (JSON.stringify(a?.package?.document) !== JSON.stringify(b?.package?.document)) {
-        return false;
-      }
-    }
-    // Also compare headers/footers (stored as Maps, use reference equality first)
+    if (a?.package?.document !== b?.package?.document) return false;
     if (a?.package?.headers !== b?.package?.headers) return false;
     if (a?.package?.footers !== b?.package?.footers) return false;
     return true;
