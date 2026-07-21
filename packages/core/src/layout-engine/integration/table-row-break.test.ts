@@ -124,8 +124,10 @@ describe('Layout engine — table row breaking (Word fidelity)', () => {
     expect(continuation!.continuesFromPrev).toBe(true);
     expect(continuation!.fromRow).toBe(2); // the tall last row
 
-    // Break points are whole lines (multiples of the line height).
-    expect(first.bottomClip! % LINE).toBe(0);
+    // Break points are whole PAINTED lines: the painter's default 1px cell
+    // top padding plus a multiple of the line height (breakOffsets mirror
+    // renderTableCell's padding defaults so clips never slice glyphs).
+    expect((first.bottomClip! - 1) % LINE).toBe(0);
   });
 
   test('keeps a w:cantSplit row whole (moves it to the next page instead of breaking)', () => {

@@ -22,6 +22,12 @@ export interface CellContentLayout {
    * bottom) — the clean break points for the paginator.
    */
   flatBottoms: number[];
+  /**
+   * Top y of each `flatBottoms` entry (same order): the line's top, or the
+   * atomic block's top. `[flatTops[i], flatBottoms[i]]` is the vertical span a
+   * break must not cut through.
+   */
+  flatTops: number[];
   /** Total stacked height incl. the last block's trailing space-after. */
   contentHeight: number;
 }
@@ -36,6 +42,7 @@ export function layoutCellContent(
 ): CellContentLayout {
   const lineTops: number[][] = [];
   const flatBottoms: number[] = [];
+  const flatTops: number[] = [];
   let y = startY;
   let prevAfter = 0;
   const n = blockMeasures?.length ?? 0;
@@ -50,6 +57,7 @@ export function layoutCellContent(
       for (const line of measure.lines) {
         y += line.floatSkipBefore ?? 0;
         tops.push(y);
+        flatTops.push(y);
         y += line.lineHeight;
         flatBottoms.push(y);
       }
@@ -57,7 +65,9 @@ export function layoutCellContent(
       prevAfter = spacing?.after ?? 0;
     } else if (measure && 'totalHeight' in measure && typeof measure.totalHeight === 'number') {
       // Nested table / non-paragraph: one atomic block (break only at its bottom).
-      y += prevAfter + measure.totalHeight;
+      y += prevAfter;
+      flatTops.push(y);
+      y += measure.totalHeight;
       lineTops.push([]);
       flatBottoms.push(y);
       prevAfter = 0;
@@ -67,5 +77,5 @@ export function layoutCellContent(
   }
 
   // The painter renders the final block's trailing space-after as paddingBottom.
-  return { lineTops, flatBottoms, contentHeight: y - startY + prevAfter };
+  return { lineTops, flatBottoms, flatTops, contentHeight: y - startY + prevAfter };
 }

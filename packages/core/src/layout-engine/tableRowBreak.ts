@@ -60,24 +60,58 @@ export function buildTableRowBreakInfo(
     const rowHeight = measure.rows[r]?.height ?? 0;
     const offsets = new Set<number>();
     offsets.add(rowHeight); // a row boundary is always a clean break
+    // Painted line spans of ALL covering cells: a break offset is only clean
+    // when NO column has a line straddling it (Word never cuts through a
+    // glyph — a line bottom in one column can land mid-line in another, e.g.
+    // a 3-line cell next to a vertically-centered 1-line cell).
+    const lineSpans: Array<[number, number]> = [];
 
     for (const g of resolved) {
       if (g.rowIndex > r || g.rowIndex + g.rowSpan - 1 < r) continue;
       const sourceCell = block.rows[g.rowIndex]?.cells?.[g.cellIndex];
       const measuredCell = measure.rows[g.rowIndex]?.cells?.[g.cellIndex];
       if (!sourceCell || !measuredCell) continue;
-      // OOXML/TableNormal default top padding is 0 (matches measureTable).
-      const padTop = sourceCell.padding?.top ?? 0;
-      const { flatBottoms } = layoutCellContent(sourceCell.blocks, measuredCell.blocks, padTop);
+      // Break offsets must live in PAINTED space, so mirror renderTableCell's
+      // defaults: painter cell padding defaults to 1px top/bottom.
+      const padTop = sourceCell.padding?.top ?? 1;
+      const padBottom = sourceCell.padding?.bottom ?? 1;
+      const { flatBottoms, flatTops, contentHeight } = layoutCellContent(
+        sourceCell.blocks,
+        measuredCell.blocks,
+        padTop
+      );
+      // Mirror renderTableCell's vertical alignment: when content doesn't fill
+      // the cell box, vAlign center/bottom flex-shifts the painted content down
+      // by the leftover slack. The line bottoms must shift identically or the
+      // paginator clips straight through painted glyphs (DRC certifications
+      // table: style-cascaded vAlign=center put lines ~6px below the measured
+      // offsets, slicing the boundary row's text on both pages).
+      const boxH = rowTops[g.rowIndex + g.rowSpan] - rowTops[g.rowIndex];
+      const contentFillsBox = (measuredCell.height ?? 0) >= boxH - 0.5;
+      let vShift = 0;
+      if (
+        !contentFillsBox &&
+        (sourceCell.verticalAlign === 'center' || sourceCell.verticalAlign === 'bottom')
+      ) {
+        const slack = Math.max(0, boxH - padTop - padBottom - contentHeight);
+        vShift = sourceCell.verticalAlign === 'center' ? slack / 2 : slack;
+      }
       // Map cell-content y (relative to the cell/region top at rowTops[startRow])
       // into this row's coordinate space (relative to rowTops[r]).
       const shift = rowTops[r] - rowTops[g.rowIndex];
-      for (const b of flatBottoms) {
-        const off = b - shift;
+      for (let i = 0; i < flatBottoms.length; i++) {
+        const off = flatBottoms[i] + vShift - shift;
         if (off > 0 && off < rowHeight) offsets.add(off);
+        lineSpans.push([flatTops[i] + vShift - shift, flatBottoms[i] + vShift - shift]);
       }
     }
-    breakOffsets.push([...offsets].sort((a, b) => a - b));
+    // Drop offsets that would cut through another column's line. 0.5px of
+    // tolerance absorbs float jitter between near-identical line grids.
+    const EPS = 0.5;
+    const clean = [...offsets].filter(
+      (off) => off >= rowHeight || !lineSpans.some(([t, b]) => off > t + EPS && off < b - EPS)
+    );
+    breakOffsets.push(clean.sort((a, b) => a - b));
   }
 
   return { rowTops, breakOffsets };
