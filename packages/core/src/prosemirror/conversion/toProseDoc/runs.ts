@@ -29,6 +29,7 @@ import { isWrapNone } from '../../../docx/wrapTypes';
 import { mergeTextFormatting } from '../../../utils/textFormattingMerge';
 import type { StyleResolver } from '../../styles';
 import { textFormattingToMarks } from './marks';
+import { isBlockExtractedShape } from './textbox';
 
 /**
  * Convert a SimpleField or ComplexField to a ProseMirror field node.
@@ -164,11 +165,12 @@ function convertRunContent(content: RunContent, marks: ReturnType<typeof schema.
       return [];
 
     case 'shape': {
-      // Shapes with text body are handled as text boxes at block level
-      // Other shapes render as inline SVG
+      // Shapes extracted as block-level text boxes (text-bearing AND textless
+      // decorative ones) are handled by extractTextBoxesFromParagraph — the
+      // predicate must match exactly or the shape duplicates on save.
+      // Remaining shapes render as inline SVG.
       const shp = content.shape;
-      if (shp.textBody && shp.textBody.content.length > 0) {
-        // Skip - handled by extractTextBoxesFromParagraph
+      if (isBlockExtractedShape(shp)) {
         return [];
       }
       return [convertShape(shp)];

@@ -338,7 +338,11 @@ export function serializeShapeContent(content: ShapeContent): string {
       if (tb.margins.bottom != null) bpAttrs.push(`bIns="${intAttr(tb.margins.bottom)}"`);
     }
 
-    if (isTextBox) {
+    // Any shape carrying textBody paragraphs must serialize them as
+    // wps:txbx — gating on shapeType === 'textBox' silently deleted the
+    // text of round-tripped PM text boxes (fromProseDoc rebuilds them as
+    // shapeType 'rect'), leaving empty rectangles after every save.
+    if (isTextBox || tb.content.length > 0) {
       textBody = [
         '<wps:txbx><w:txbxContent>',
         serializeShapeTextBody(tb.content),

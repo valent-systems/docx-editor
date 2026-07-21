@@ -68,6 +68,20 @@ function partitionTextBoxesByAnchor(textBoxes: TextBox[]): {
  * Text boxes appear as ShapeContent where the shape has textBody,
  * or as DrawingContent that contains a text box instead of an image.
  */
+/**
+ * Whether a shape is extracted to a block-level PM textBox node (instead of
+ * an inline shape node): shapes with text AND textless decorative shapes
+ * that have a visible fill/outline (e.g. a full-width navy header banner
+ * rectangle) — dropping the latter erased the banner entirely. The inline
+ * conversion in runs.ts MUST skip exactly this set, or the shape gets two PM
+ * representations and duplicates on every save round-trip.
+ */
+export function isBlockExtractedShape(shape: Shape): boolean {
+  const hasText = !!shape.textBody && shape.textBody.content.length > 0;
+  const isDecorative = !hasText && !!(shape.fill || shape.outline);
+  return !!shape.textBody && (hasText || isDecorative);
+}
+
 function extractTextBoxesFromParagraph(paragraph: Paragraph): TextBox[] {
   const textBoxes: TextBox[] = [];
   for (const content of paragraph.content) {
@@ -75,12 +89,7 @@ function extractTextBoxesFromParagraph(paragraph: Paragraph): TextBox[] {
       for (const rc of content.content) {
         if (rc.type === 'shape' && 'shape' in rc) {
           const shape = rc.shape as Shape;
-          // Convert shapes with text AND textless decorative shapes that have
-          // a visible fill/outline (e.g. a full-width navy header banner
-          // rectangle) — dropping the latter erased the banner entirely.
-          const hasText = !!shape.textBody && shape.textBody.content.length > 0;
-          const isDecorative = !hasText && !!(shape.fill || shape.outline);
-          if (shape.textBody && (hasText || isDecorative)) {
+          if (shape.textBody && isBlockExtractedShape(shape)) {
             // Convert shape with text body to TextBox
             textBoxes.push({
               type: 'textBox',

@@ -46,7 +46,7 @@ import {
 } from './xmlParser';
 import { resolveTarget } from './relsParser';
 import { sanitizeHref } from '../utils/sanitizeHref';
-import { isTextBoxDrawing } from './textBoxParser';
+import { isTextBoxDrawing, hasWpsShape } from './textBoxParser';
 import { emuToPixels } from '../utils/units';
 import {
   parsePositionH,
@@ -664,8 +664,11 @@ export function parseDrawing(
   rels: RelationshipMap | undefined,
   media: Map<string, MediaFile> | undefined
 ): Image | null {
-  // Skip text box shapes — they are handled by textBoxParser, not as images
-  if (isTextBoxDrawing(drawingEl)) return null;
+  // Skip wordprocessingShape drawings (text boxes AND textless decorative
+  // rects) — they are handled by textBoxParser, not as images. Without the
+  // hasWpsShape check, a textless shape fell through to parseInline/
+  // parseAnchor and became an Image with no blip → a broken empty frame.
+  if (isTextBoxDrawing(drawingEl) || hasWpsShape(drawingEl)) return null;
 
   const children = getChildElements(drawingEl);
 
