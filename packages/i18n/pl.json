@@ -42,6 +42,7 @@
     "openShortcut": "Ctrl+O",
     "save": "Zapisz",
     "saveShortcut": "Ctrl+S",
+    "downloadCopy": "Pobierz kopię",
     "watermark": "Znak wodny",
     "break": null,
     "sectionBreakContinuous": null,

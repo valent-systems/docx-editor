@@ -178,6 +178,7 @@ export function MenuBar() {
     onPrint,
     onOpen,
     onSave,
+    onDownload,
     onPageSetup,
     onInsertImage,
     onInsertTable,
@@ -234,10 +235,19 @@ export function MenuBar() {
             ...(onSave
               ? [
                   {
-                    icon: 'file_download',
+                    icon: 'save',
                     label: t('toolbar.save'),
                     shortcut: t('toolbar.saveShortcut'),
                     onClick: onSave,
+                  } as MenuEntry,
+                ]
+              : []),
+            ...(onDownload
+              ? [
+                  {
+                    icon: 'file_download',
+                    label: t('toolbar.downloadCopy'),
+                    onClick: onDownload,
                   } as MenuEntry,
                 ]
               : []),

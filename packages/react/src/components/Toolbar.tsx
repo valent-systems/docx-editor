@@ -184,6 +184,9 @@ export interface ToolbarProps {
   onOpen?: () => void;
   /** Callback to save/download the current DOCX (File → Save) */
   onSave?: () => void;
+  /** "Download a copy" File-menu item. Provided when Save persists in-app,
+   *  so the download stays reachable as its own action (Word's model). */
+  onDownload?: () => void;
   /** Whether to show zoom control (default: true) */
   showZoomControl?: boolean;
   /** Current zoom level (1.0 = 100%) */

@@ -1204,6 +1204,7 @@ export interface ToolbarProps {
         cssFloat: string | null;
     } | null;
     inline?: boolean;
+    onDownload?: () => void;
     onFormat?: (action: FormattingAction) => void;
     onImageTransform?: (action: 'rotateCW' | 'rotateCCW' | 'flipH' | 'flipV') => void;
     onImageWrapType?: (wrapType: string) => void;

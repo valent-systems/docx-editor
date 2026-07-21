@@ -80,6 +80,7 @@ export function DocxEditorToolbar({
   showHelpMenu,
   onOpen,
   onSave,
+  onDownload,
   onZoomChange,
   onRefocusEditor,
   onInsertTable,
@@ -129,6 +130,7 @@ export function DocxEditorToolbar({
   showHelpMenu: boolean;
   onOpen: () => void;
   onSave: () => void | Promise<void>;
+  onDownload?: () => void | Promise<void>;
   onZoomChange: (zoom: number) => void;
   onRefocusEditor: () => void;
   onInsertTable: (rows: number, columns: number) => void;
@@ -169,6 +171,7 @@ export function DocxEditorToolbar({
         onPrint={onPrint}
         onOpen={showFileOpen ? onOpen : undefined}
         onSave={onSave}
+        onDownload={onDownload}
         showZoomControl={showZoomControl}
         zoom={zoom}
         onZoomChange={onZoomChange}

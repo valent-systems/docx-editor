@@ -30,6 +30,7 @@
     "openShortcut": "Ctrl+O",
     "save": "Save",
     "saveShortcut": "Ctrl+S",
+    "downloadCopy": "Download a copy",
     "print": "Print",
     "printShortcut": "Ctrl+P",
     "pageSetup": "Page setup",

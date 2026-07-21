@@ -300,8 +300,7 @@ export interface DocxEditorProps {
   renderLogo?: () => ReactNode;
   /** Document name shown in the title bar */
   documentName?: string;
-  /** Show the name in the title bar (default true; File > Save keeps naming downloads). */
-  showDocumentName?: boolean;
+  showDocumentName?: boolean; // hide title-bar name display; still names downloads
   /** Callback when document name changes */
   onDocumentNameChange?: (name: string) => void;
   /** Whether the document name is editable (default: true) */
@@ -1816,7 +1815,8 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
             showFileOpen={showFileOpen}
             showHelpMenu={showHelpMenu}
             onOpen={handleOpenDocument}
-            onSave={handleDownloadDocument}
+            onSave={onSave ? () => void handleSave() : handleDownloadDocument}
+            onDownload={onSave ? handleDownloadDocument : undefined}
             onZoomChange={handleZoomChange}
             onRefocusEditor={focusActiveEditor}
             onInsertTable={handleInsertTable}

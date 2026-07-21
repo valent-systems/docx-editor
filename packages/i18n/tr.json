@@ -30,6 +30,7 @@
     "openShortcut": "Ctrl+O",
     "save": "Kaydet",
     "saveShortcut": "Ctrl+S",
+    "downloadCopy": "Bir kopyasını indir",
     "print": "Yazdır",
     "printShortcut": "Ctrl+P",
     "pageSetup": "Sayfa yapısı",
