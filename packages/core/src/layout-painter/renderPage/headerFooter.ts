@@ -446,10 +446,15 @@ export function renderHeaderFooterContent(
         { ...context, positioning: 'absolute' },
         { document: doc }
       );
-      // Vertical position stays on the HF flow cursor (the anchor's positionV
-      // is not yet honored for HF text boxes); only the horizontal anchor is
-      // resolved here, which is what the reported page-centered banner needs.
-      fragEl.style.top = `${cursorY}px`;
+      // Honor the anchor's vertical position via the same resolver floating
+      // images use (page/margin/paragraph relative). A paragraph-relative
+      // negative offset is how banner rectangles reach the page top edge
+      // (DRC: V=paragraph −22px pulls the navy band flush to y=0); ignoring
+      // it left a white strip above the band.
+      fragEl.style.top = `${resolveHeaderFooterFloatTop(
+        { height: measure.height, paragraphY: cursorY, position: block.position ?? {} },
+        layout
+      )}px`;
       // Honor the anchor's horizontal position (e.g. centered relative to the
       // page) instead of pinning the box to the left.
       fragEl.style.left = resolveHeaderFooterFloatLeft(
