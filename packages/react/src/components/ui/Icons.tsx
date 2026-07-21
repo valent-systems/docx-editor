@@ -849,8 +849,12 @@ export function IconAgentSparkle(props: IconProps) {
 // ICON MAP - for MaterialSymbol compatibility
 // ============================================================================
 
+// prettier-ignore
+function IconSave(p: IconProps) { return <SvgIcon {...p}><path d="M840-680v480q0 33-23.5 56.5T760-120H200q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h480l160 160Zm-80 34L646-760H200v560h560v-446ZM480-240q50 0 85-35t35-85q0-50-35-85t-85-35q-50 0-85 35t-35 85q0 50 35 85t85 35ZM240-560h360v-160H240v160Zm-40-86v446-560 114Z"/></SvgIcon>; }
+
 const iconMap: Record<string, React.ComponentType<IconProps>> = {
   undo: IconUndo,
+  save: IconSave,
   redo: IconRedo,
   print: IconPrint,
   file_download: IconFileDownload,
@@ -882,9 +886,7 @@ const iconMap: Record<string, React.ComponentType<IconProps>> = {
   table_rows: IconTableRows,
   view_column: IconViewColumn,
   border_all: IconBorderAll,
-  // "Select entire table" reuses the grid glyph (no dedicated select_all icon
-  // to keep this file under the max-lines budget).
-  select_all: IconBorderAll,
+  select_all: IconBorderAll, // reuses grid glyph (max-lines budget)
   border_outer: IconBorderOuter,
   border_inner: IconBorderInner,
   border_clear: IconBorderClear,

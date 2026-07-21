@@ -103,6 +103,7 @@ export interface DocxEditorProps {
     renderLogo?: () => ReactNode;
     renderTitleBarRight?: () => ReactNode;
     rulerUnit?: 'inch' | 'cm';
+    // (undocumented)
     showDocumentName?: boolean;
     showFileOpen?: boolean;
     showHelpMenu?: boolean;
